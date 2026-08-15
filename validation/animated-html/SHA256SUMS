@@ -27,7 +27,8 @@ d52772be075631990af483942bd13198f00d97b0edf92289c14524089c724f27  ./conversation
 bd5238263062ab6a392b0347db5693a5ff914e4ad336edd3f7bb52a67a171d01  ./conversations/anchored-steer-max.jsonl
 ebdcbf5fccd7a16a91ebf4d36537c74afabd906ab24aa8fdcc0c1eda4f59de7d  ./conversations/control-high.jsonl
 b9339307684f1b2d7f3bcbe719e35edf0fb599a6a8366699efda675b04c03cef  ./conversations/control-max.jsonl
-8330c48e0157a9efd3e6fb9d5051955bbaf99ae06c2bbad3ef19ecc1bae5a419  ./README.md
+0e2695667e254aa2a76d0570f2db5077c72f125e02cd9b5c16a20afb137c5ec4  ./demo.gif
+7d073b4a5c332b9fca5c1064f506821db57ef9d5082f9c9a555d52b82332a2f6  ./README.md
 f9728b8db054d2f468a362873ed69b4255b9709336eefb7aae40294ca43a8d17  ./results/anchored-followup-high.txt
 c17d843018934fe3a60efad3098300b6607e177b48d6a84420915b97b375bd42  ./results/anchored-followup-max.txt
 367fef9f1fd68ea26e14fab68e69f1869f614368d86752bbf8a72b009e583797  ./results/anchored-no-continuation-high.txt

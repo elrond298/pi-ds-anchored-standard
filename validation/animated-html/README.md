@@ -33,6 +33,12 @@ All runs used `deepseek/deepseek-v4-pro` on 2026-08-15 with the same installed P
 
 The structural checker alone did not catch the follow-up/max rendering defect. Browser QA exposed the zero-sized SVG. Both final steering outputs rendered as recognizable animated pelicans riding bicycles without console or page errors.
 
+![Final anchored max animation](demo.gif)
+
+`demo.gif` is a six-second, 720-pixel, 10-fps browser recording of the checked-in
+`artifacts/anchored-steer-max/pelican-bicycle.html`, converted to GIF for direct
+README playback.
+
 The final anchored stop sequence at both thinking levels was:
 
 ```text
