@@ -119,8 +119,8 @@ Pro only; they never enable the workaround for another model.
 
 ## Visual validation
 
-We used the same animated-HTML task for six runs at `high` and `max` thinking
-levels. The comparison uses three clearly defined setups:
+We used the same animated-HTML task for eight runs at `high` and `max` thinking
+levels. The comparison uses four setups:
 
 1. **Ordinary Pi (extension disabled):** the model receives Pi's normal prompt,
    workspace context, and every enabled tool from the first request. This is the
@@ -129,8 +129,10 @@ levels. The comparison uses three clearly defined setups:
    but a truncated response starts a separate follow-up turn. This was an early
    implementation that lost the model's ongoing reasoning.
 3. **Continue the same run (current behavior):** the extension limits the first
-   request, then continues the interrupted response inside the same agent run
-   with ordinary Pi behavior restored.
+   request to 1,024 tokens, then continues the interrupted response inside the
+   same agent run with ordinary Pi behavior restored.
+4. **30,000-token bootstrap:** the current implementation with only
+   `bootstrapMaxTokens` raised from 1,024 to 30,000.
 
 <table>
 <thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
@@ -150,14 +152,20 @@ levels. The comparison uses three clearly defined setups:
 <td><img src="validation/animated-html/animations/steer-high.gif" alt="Same-run continuation, high thinking" width="360"></td>
 <td><img src="validation/animated-html/animations/steer-max.gif" alt="Same-run continuation, max thinking" width="360"></td>
 </tr>
+<tr>
+<th>30,000-token bootstrap</th>
+<td><img src="validation/animated-html/animations/bootstrap-30k-high.gif" alt="30,000-token bootstrap, high thinking" width="360"></td>
+<td><img src="validation/animated-html/animations/bootstrap-30k-max.gif" alt="30,000-token bootstrap, max thinking" width="360"></td>
+</tr>
 </tbody>
 </table>
 
-In this test, the current behavior produced more detailed and coherent results
-than ordinary Pi, especially at `max`. This is one visual example, not a general
-benchmark.
+Raising the bootstrap limit did not improve performance consistently. At `high`,
+the 30,000-token result was slower and visually worse. At `max`, it was visually
+cleaner but took 850.8 seconds instead of 291.5 seconds. This is one visual
+example, not a general benchmark.
 
-The [validation directory](validation/animated-html/) contains all six generated
+The [validation directory](validation/animated-html/) contains all eight generated
 HTML files, screenshots, animations, complete sanitized Pi conversations, the
 sanitizer, and a SHA-256 manifest.
 

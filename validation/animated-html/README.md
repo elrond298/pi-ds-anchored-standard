@@ -19,8 +19,11 @@ The retained runs compare:
 - **New follow-up turn (first attempt):** the extension limits the first request,
   but a response cut off at 1,024 tokens starts a separate follow-up turn.
 - **Continue the same run (current behavior):** the extension limits the first
-  request, then resumes the interrupted work inside the same agent run after
-  restoring Pi's normal prompt, tools, and output limit.
+  request to 1,024 tokens, then resumes interrupted work inside the same agent run
+  after restoring Pi's normal prompt, tools, and output limit.
+- **30,000-token bootstrap:** the current implementation loaded through
+  [`bootstrap-30k.ts`](bootstrap-30k.ts), which only raises
+  `bootstrapMaxTokens` from 1,024 to 30,000.
 
 Each configuration was run at `high` and `max` thinking levels.
 
@@ -44,17 +47,32 @@ Each configuration was run at `high` and `max` thinking levels.
 <td><img src="animations/steer-high.gif" alt="Same-run continuation, high thinking" width="360"></td>
 <td><img src="animations/steer-max.gif" alt="Same-run continuation, max thinking" width="360"></td>
 </tr>
+<tr>
+<th>30,000-token bootstrap</th>
+<td><img src="animations/bootstrap-30k-high.gif" alt="30,000-token bootstrap, high thinking" width="360"></td>
+<td><img src="animations/bootstrap-30k-max.gif" alt="30,000-token bootstrap, max thinking" width="360"></td>
+</tr>
 </tbody>
 </table>
 
-In this test, the current behavior produced more detailed and coherent results
-than ordinary Pi, especially at `max`. This is one visual example, not a general
-benchmark.
+## Token-budget comparison
+
+| Bootstrap limit | Thinking | Duration | Reasoning chars | Tool calls | Visual result |
+| ---: | --- | ---: | ---: | ---: | --- |
+| 1,024 | `high` | 162.5 s | 36,478 | 3 | baseline |
+| 30,000 | `high` | 227.3 s | 44,357 | 3 | worse; rider is disconnected from the pedals |
+| 1,024 | `max` | 291.5 s | 57,942 | 3 | baseline |
+| 30,000 | `max` | 850.8 s | 182,491 | 1 | cleaner rider, bicycle, and scenery |
+
+Durations run from the user message to the final assistant message. Raising the
+limit did not improve performance consistently: both runs were slower, `high`
+regressed visually, and the cleaner `max` result cost 2.9× the time and 3.1× the
+reasoning text.
 
 ## Preserved conversations
 
 [`conversations/`](conversations/) contains the complete Pi JSONL entry sequence
-for the six retained runs, including full reasoning, visible replies, tool calls,
+for the eight retained runs, including full reasoning, visible replies, tool calls,
 tool results, stop reasons, usage data, the hidden continuation message, and
 extension bookkeeping.
 
@@ -65,6 +83,8 @@ anchored-followup-high.jsonl
 anchored-followup-max.jsonl
 anchored-steer-high.jsonl
 anchored-steer-max.jsonl
+anchored-30k-high.jsonl
+anchored-30k-max.jsonl
 ```
 
 ## Sanitization

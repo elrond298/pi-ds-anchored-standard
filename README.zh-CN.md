@@ -89,11 +89,12 @@ createAnchoredStandard({
 
 ## 可视化验证
 
-我们使用同一个“生成鹈鹕骑自行车的动画 HTML”任务，在 `high` 和 `max` 两种思考级别下进行了六次运行。比较包含三种明确的设置：
+我们使用同一个“生成鹈鹕骑自行车的动画 HTML”任务，在 `high` 和 `max` 两种思考级别下进行了八次运行，比较四种设置：
 
 1. **普通 Pi（未启用本扩展）**：模型从第一次请求开始就能看到 Pi 的正常提示词、工作区上下文和所有已启用工具。这是对照组，用来展示不启用本扩展时 Pi 的表现。
 2. **新建后续轮次（早期方案）**：本扩展会精简第一次请求，但回复被截断后，会新建一个后续轮次。这个早期实现丢失了模型正在进行的推理状态。
-3. **在同一次运行中继续（当前方案）**：本扩展精简第一次请求；回复被截断后，在同一次 agent 运行中继续，并恢复普通 Pi 的环境。
+3. **在同一次运行中继续（当前方案）**：第一次请求限制为 1,024 tokens；回复被截断后，在同一次 agent 运行中继续，并恢复普通 Pi 的环境。
+4. **30,000-token 首轮**：只把当前方案的 `bootstrapMaxTokens` 从 1,024 提高到 30,000。
 
 <table>
 <thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
@@ -113,12 +114,17 @@ createAnchoredStandard({
 <td><img src="validation/animated-html/animations/steer-high.gif" alt="同一次运行内继续，high 思考级别" width="360"></td>
 <td><img src="validation/animated-html/animations/steer-max.gif" alt="同一次运行内继续，max 思考级别" width="360"></td>
 </tr>
+<tr>
+<th>30,000-token 首轮</th>
+<td><img src="validation/animated-html/animations/bootstrap-30k-high.gif" alt="30,000-token 首轮，high 思考级别" width="360"></td>
+<td><img src="validation/animated-html/animations/bootstrap-30k-max.gif" alt="30,000-token 首轮，max 思考级别" width="360"></td>
+</tr>
 </tbody>
 </table>
 
-在这个测试中，当前方案生成的结果比普通 Pi 更丰富、更连贯，`max` 下尤其明显。这里只展示一个可视化示例，不代表所有任务都会获得同样收益。
+提高首轮 token 上限没有稳定改善表现：`high` 更慢且视觉效果更差；`max` 的画面更干净，但耗时从 291.5 秒增加到 850.8 秒。这里只展示一个可视化示例，不代表一般结论。
 
-[验证目录](validation/animated-html/)保存了六个 HTML 文件、截图、动画、完整且已脱敏的 Pi 对话、脱敏脚本和 SHA-256 清单。
+[验证目录](validation/animated-html/)保存了八个 HTML 文件、截图、动画、完整且已脱敏的 Pi 对话、脱敏脚本和 SHA-256 清单。
 
 ## 轨迹统计命令
 
