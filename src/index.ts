@@ -14,7 +14,7 @@
  * keep "let me" ≈ 0–1 while "we"/"let's" dominate.
  */
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { createAnchoredStandard } from "./phases.js";
+import { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT } from "./phases.js";
 import { createTrajectoryDetector } from "./detect.js";
 
 export { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT } from "./phases.js";
@@ -23,7 +23,7 @@ export { TrajectoryTracker, countLetMe, createTrajectoryDetector } from "./detec
 export type { TrajectoryStats, TrajectoryDetectorOptions } from "./detect.js";
 
 export default function anchoredStandard(pi: ExtensionAPI): void {
-	createAnchoredStandard()(pi);
+	createAnchoredStandard({ minimalPrompt: ANCHORED_MINIMAL_PROMPT })(pi);
 
 	const detector = createTrajectoryDetector();
 	detector.activate(pi);
