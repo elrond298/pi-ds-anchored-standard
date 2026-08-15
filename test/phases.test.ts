@@ -11,16 +11,21 @@ interface Entry {
 function makePi() {
 	// Post-startup steady state: the extension already applied bootstrap.
 	let active = ["bash", "read"];
+	const sent: Array<{ message: any; options: any }> = [];
 	const handlers = new Map<string, Array<(event: any, ctx: any) => any>>();
 	const pi = {
 		get active() {
 			return [...active];
+		},
+		get sent() {
+			return [...sent];
 		},
 		getActiveTools: () => [...active],
 		getAllTools: () => TOOLS.map((name) => ({ name, description: "", parameters: {} })),
 		setActiveTools: (names: string[]) => {
 			active = [...names];
 		},
+		sendMessage: (message: any, options: any) => sent.push({ message, options }),
 		on: (evt: string, h: (event: any, ctx: any) => any) => {
 			handlers.set(evt, [...(handlers.get(evt) ?? []), h]);
 		},
@@ -202,6 +207,51 @@ describe("bootstrap provider payload", () => {
 			role: "system",
 			content: "full pi prompt + workspace + skills\n\nPONYTAIL MODE ACTIVE — level: lite",
 		});
+	});
+
+	it("continues exactly once when the bootstrap response hits its token cap", async () => {
+		const { pi } = setup();
+		await pi.emit(
+			"before_provider_request",
+			{ type: "before_provider_request", payload: { max_tokens: 384_000 } },
+			makeCtx(),
+		);
+		await pi.emit(
+			"message_end",
+			{ type: "message_end", message: { role: "assistant", stopReason: "length" } },
+			makeCtx(),
+		);
+		expect(pi.active.sort()).toEqual([...TOOLS].sort());
+		expect(pi.sent).toEqual([{
+			message: {
+				customType: "anchored-standard-continuation",
+				content: "Resume the interrupted reasoning exactly where it stopped. Do not restart, summarize, or simplify the plan; preserve its intended quality, then complete the user's request using the restored tools.",
+				display: false,
+			},
+			options: { deliverAs: "steer", triggerTurn: true },
+		}]);
+
+		await pi.emit(
+			"message_end",
+			{ type: "message_end", message: { role: "assistant", stopReason: "length" } },
+			makeCtx(),
+		);
+		expect(pi.sent).toHaveLength(1);
+	});
+
+	it("does not continue a normally completed bootstrap response", async () => {
+		const { pi } = setup();
+		await pi.emit(
+			"before_provider_request",
+			{ type: "before_provider_request", payload: { max_tokens: 384_000 } },
+			makeCtx(),
+		);
+		await pi.emit(
+			"message_end",
+			{ type: "message_end", message: { role: "assistant", stopReason: "stop" } },
+			makeCtx(),
+		);
+		expect(pi.sent).toEqual([]);
 	});
 
 	it("rejects an invalid bootstrap token cap", () => {

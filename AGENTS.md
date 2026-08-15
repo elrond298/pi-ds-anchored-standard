@@ -12,6 +12,8 @@ to pi's dynamic tool loading:
 - the session promotes to the full registered tool catalog after its first
   durable promotion signal — first `tool_call` or first assistant
   `message_end`, whichever comes first (`promoteOn: "either"`);
+- a bootstrap response ending at `stopReason: "length"` queues exactly one
+  hidden steering continuation in the same agent run after promotion;
 - the phase is derived from the durable session transcript (any
   assistant/toolResult entry), so resume, fork, and reload preserve it
   without stored state;

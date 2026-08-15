@@ -37,6 +37,10 @@ pi -e ./src/index.ts
 - **Request #1 tools**: active tools are exactly `bash` + `read`.
 - **Request #1 output**: provider payload is capped to `max_tokens: 1024`, the
   upstream reproduction's trajectory-critical budget.
+- **Truncation continuation**: if request #1 exhausts that budget, the extension
+  queues one hidden steering message so the same agent run resumes its reasoning
+  with the restored prompt, tools, and provider budget instead of stopping at
+  `stopReason: length`.
 - **Promotion**: the first `tool_call` or the first assistant `message_end`
   restores the full registered catalog, provider budget, and Pi prompt before
   the next request, including user-installed tools and extension prompt additions

@@ -58,6 +58,7 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 	return (pi: ExtensionAPI): void => {
 		const allTools = new Set<string>();
 		const normalPrompts = new Map<string, string>();
+		const bootstrapRequests = new Set<string>();
 		const remember = () => {
 			for (const t of pi.getAllTools()) allTools.add(t.name);
 		};
@@ -171,21 +172,34 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 					...(user ? [user] : []),
 				];
 			}
-
+			bootstrapRequests.add(sessionId);
 			return result;
 		});
 
 		if (promoteOn !== "assistant-message") {
-			pi.on("tool_call", (_event: ToolCallEvent) => {
+			pi.on("tool_call", (_event: ToolCallEvent, ctx) => {
 				// Any tool call promotes — even a blocked or failed execution, which
 				// is already durable in the transcript (matches anchored).
+				bootstrapRequests.delete(ctx.sessionManager.getSessionId());
 				promote();
 			});
 		}
 
 		if (promoteOn !== "tool-call") {
-			pi.on("message_end", (event: MessageEndEvent) => {
-				if (event.message.role === "assistant") promote();
+			pi.on("message_end", (event: MessageEndEvent, ctx) => {
+				if (event.message.role !== "assistant") return;
+				const wasBootstrap = bootstrapRequests.delete(ctx.sessionManager.getSessionId());
+				promote();
+				if (wasBootstrap && (event.message as { stopReason?: string }).stopReason === "length") {
+					pi.sendMessage(
+						{
+							customType: "anchored-standard-continuation",
+							content: "Resume the interrupted reasoning exactly where it stopped. Do not restart, summarize, or simplify the plan; preserve its intended quality, then complete the user's request using the restored tools.",
+							display: false,
+						},
+						{ deliverAs: "steer", triggerTurn: true },
+					);
+				}
 			});
 		}
 	};
