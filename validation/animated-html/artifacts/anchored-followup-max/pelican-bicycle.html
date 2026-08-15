@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pelican on a Bicycle</title>
+<style>
+  :root { color-scheme: light; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(#aee3f7 0%, #d8f3ff 60%, #fdf6d8 60%, #e8f7c8 100%);
+    overflow: hidden;
+  }
+  svg { max-width: 90vmin; max-height: 90vmin; display: block; }
+
+  /* Wheels & crank spin */
+  .wheel-spin { transform-box: fill-box; transform-origin: center; animation: spin 0.9s linear infinite; }
+  .pedal-spin { transform-box: fill-box; transform-origin: center; animation: spin 0.9s linear infinite; }
+
+  /* Pelican bob */
+  .pelican { animation: bob 0.45s ease-in-out infinite alternate; }
+  .wing { transform-box: fill-box; transform-origin: 20% 30%; animation: flap 0.45s ease-in-out infinite alternate; }
+  .tail { transform-box: fill-box; transform-origin: 10% 90%; animation: wag 0.9s ease-in-out infinite alternate; }
+  .beak { transform-box: fill-box; transform-origin: 0% 100%; animation: peck 0.9s ease-in-out infinite; }
+
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes bob { from { transform: translateY(0); } to { transform: translateY(-7px); } }
+  @keyframes flap { from { transform: rotate(-14deg); } to { transform: rotate(10deg); } }
+  @keyframes wag { from { transform: rotate(-6deg); } to { transform: rotate(8deg); } }
+  @keyframes peck {
+    0%, 55%, 100% { transform: rotate(0); }
+    70% { transform: rotate(7deg); }
+  }
+
+  .cloud { animation: drift 14s linear infinite; }
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(90px); } }
+
+  .ground-line { stroke-dasharray: 14 10; animation: road 0.3s linear infinite; }
+  @keyframes road { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -24; } }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 640 480" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An animated pelican riding a bicycle">
+  <!-- Sun & clouds -->
+  <circle cx="560" cy="70" r="34" fill="#ffd93b"/>
+  <g class="cloud" fill="#ffffff" opacity="0.9">
+    <ellipse cx="120" cy="90" rx="34" ry="16"/>
+    <ellipse cx="150" cy="80" rx="26" ry="14"/>
+    <ellipse cx="92" cy="84" rx="22" ry="12"/>
+  </g>
+  <g class="cloud" fill="#ffffff" opacity="0.7">
+    <ellipse cx="420" cy="60" rx="28" ry="13"/>
+    <ellipse cx="446" cy="52" rx="20" ry="11"/>
+  </g>
+
+  <!-- Ground -->
+  <rect x="0" y="380" width="640" height="100" fill="#9fd46e"/>
+  <line class="ground-line" x1="0" y1="400" x2="640" y2="400" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- Bicycle: rear wheel -->
+  <g transform="translate(205 370)">
+    <circle r="52" fill="none" stroke="#4a4a4a" stroke-width="7"/>
+    <g class="wheel-spin">
+      <g stroke="#7a7a7a" stroke-width="3">
+        <line x1="0" y1="-52" x2="0" y2="52"/>
+        <line x1="-52" y1="0" x2="52" y2="0"/>
+        <line x1="-37" y1="-37" x2="37" y2="37"/>
+        <line x1="37" y1="-37" x2="-37" y2="37"/>
+      </g>
+    </g>
+    <circle r="6" fill="#4a4a4a"/>
+  </g>
+
+  <!-- Bicycle: front wheel -->
+  <g transform="translate(425 370)">
+    <circle r="52" fill="none" stroke="#4a4a4a" stroke-width="7"/>
+    <g class="wheel-spin">
+      <g stroke="#7a7a7a" stroke-width="3">
+        <line x1="0" y1="-52" x2="0" y2="52"/>
+        <line x1="-52" y1="0" x2="52" y2="0"/>
+        <line x1="-37" y1="-37" x2="37" y2="37"/>
+        <line x1="37" y1="-37" x2="-37" y2="37"/>
+      </g>
+    </g>
+    <circle r="6" fill="#4a4a4a"/>
+  </g>
+
+  <!-- Bicycle: frame -->
+  <g stroke="#e2543e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <line x1="205" y1="370" x2="275" y2="300"/>   <!-- seat tube -->
+    <line x1="275" y1="300" x2="425" y2="370"/>   <!-- down tube -->
+    <line x1="275" y1="300" x2="335" y2="310"/>   <!-- top tube -->
+    <line x1="335" y1="310" x2="425" y2="370"/>   <!-- fork to front hub -->
+    <line x1="335" y1="310" x2="360" y2="255"/>   <!-- head tube -->
+    <line x1="360" y1="255" x2="382" y2="245"/>   <!-- stem -->
+  </g>
+
+  <!-- Handlebar & seat -->
+  <line x1="382" y1="245" x2="362" y2="225" stroke="#4a4a4a" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="362" cy="225" r="5" fill="#4a4a4a"/>
+  <path d="M263 296 Q275 280 287 296" fill="#4a4a4a"/>
+
+  <!-- Crank & pedals (rotate as one unit) -->
+  <g class="pedal-spin" transform="translate(335 310)">
+    <circle r="7" fill="#4a4a4a"/>
+    <g stroke="#4a4a4a" stroke-width="6" stroke-linecap="round">
+      <line x1="0" y1="0" x2="0" y2="-38"/>
+      <line x1="0" y1="0" x2="0" y2="38"/>
+    </g>
+    <rect x="-16" y="-46" width="32" height="8" rx="3" fill="#4a4a4a"/>
+    <rect x="-16" y="38" width="32" height="8" rx="3" fill="#4a4a4a"/>
+  </g>
+
+  <!-- Pelican -->
+  <g class="pelican" transform="translate(252 210)">
+    <!-- Legs: one to each pedal -->
+    <g stroke="#f0a832" stroke-width="6" stroke-linecap="round" fill="none">
+      <path d="M8 96 L70 140"/> <!-- back leg to pedal (335,310 ≈ local 83,100) -->
+      <path d="M22 96 L78 96"/> <!-- front leg to top pedal -->
+    </g>
+    <ellipse cx="70" cy="140" rx="13" ry="5" fill="#e08f1f"/>
+    <ellipse cx="78" cy="96" rx="13" ry="5" fill="#e08f1f"/>
+
+    <!-- Tail -->
+    <g class="tail">
+      <path d="M-52 66 Q-78 60 -88 44 Q-72 68 -52 78 Z" fill="#3a3a3a"/>
+    </g>
+
+    <!-- Body -->
+    <ellipse cx="0" cy="62" rx="56" ry="40" fill="#fdfdfd" stroke="#d8d8d8" stroke-width="2"/>
+    <path d="M-50 50 Q-60 78 -44 88 Q-30 96 -10 94 Q14 92 30 78 Q44 60 40 40 Q-20 30 -50 50 Z" fill="#f2f2f2"/>
+
+    <!-- Wing -->
+    <g class="wing">
+      <path d="M-6 52 Q-30 46 -44 64 Q-38 80 -16 84 Q0 86 8 74 Q12 62 -6 52 Z" fill="#e8e8e8" stroke="#cfcfcf" stroke-width="2"/>
+      <path d="M-30 58 Q-38 68 -34 76" stroke="#c9c9c9" stroke-width="2" fill="none"/>
+    </g>
+
+    <!-- Neck & head -->
+    <path d="M34 44 Q52 22 52 4 Q52 -14 40 -22" fill="none" stroke="#fdfdfd" stroke-width="20" stroke-linecap="round"/>
+    <path d="M34 44 Q52 22 52 4 Q52 -14 40 -22" fill="none" stroke="#e0e0e0" stroke-width="20" stroke-linecap="round" opacity="0.25"/>
+
+    <!-- Beak -->
+    <g class="beak">
+      <path d="M40 -24 Q14 -26 -8 -12 Q18 -16 40 -14 Z" fill="#f0a832" stroke="#d08a1c" stroke-width="2"/>
+      <path d="M8 -20 Q-6 -16 -8 -12 Q8 -10 20 -12 Z" fill="#e08f1f"/>
+    </g>
+
+    <!-- Eye -->
+    <circle cx="42" cy="-20" r="4.5" fill="#1d1d1d"/>
+    <circle cx="43.5" cy="-21.5" r="1.6" fill="#ffffff"/>
+
+    <!-- Head feather tuft -->
+    <path d="M34 -30 Q30 -42 36 -48 M38 -28 Q40 -40 46 -44" stroke="#e8e8e8" stroke-width="3" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- Little speed lines -->
+  <g stroke="#ffffff" stroke-width="3" stroke-linecap="round" opacity="0.8">
+    <line x1="120" y1="330" x2="160" y2="330"/>
+    <line x1="105" y1="352" x2="150" y2="352"/>
+    <line x1="130" y1="374" x2="170" y2="374"/>
+  </g>
+</svg>
+</body>
+</html>

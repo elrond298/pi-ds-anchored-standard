@@ -1,0 +1,125 @@
+{
+  "date": "2026-08-15",
+  "model": "deepseek/deepseek-v4-pro",
+  "prompt": "Generate an HTML containing an animated SVG of a pelican riding a bicycle. Do not test or validate it yourself.",
+  "scoring": {
+    "maximum": 100,
+    "checks": [
+      "HTML file",
+      "inline SVG",
+      "pelican semantics",
+      "bicycle semantics",
+      "animation"
+    ],
+    "browserQa": "DOM loaded; console and page errors checked; screenshots inspected externally"
+  },
+  "runs": {
+    "control-high": {
+      "configuration": "normal Pi prompt and full catalog from request 1",
+      "thinkingLevel": "high",
+      "score": 100,
+      "artifactBytes": 7496,
+      "durationMs": 28200,
+      "tools": ["write"],
+      "thinkingChars": 375,
+      "visibleChars": 237,
+      "letMeHits": 2,
+      "stopReasons": ["toolUse", "stop"],
+      "browserQaPassed": true
+    },
+    "control-max": {
+      "configuration": "normal Pi prompt and full catalog from request 1",
+      "thinkingLevel": "max",
+      "score": 100,
+      "artifactBytes": 6596,
+      "durationMs": 142800,
+      "tools": ["write"],
+      "thinkingChars": 28117,
+      "visibleChars": 438,
+      "letMeHits": 15,
+      "stopReasons": ["toolUse", "stop"],
+      "browserQaPassed": true
+    },
+    "anchored-no-continuation-high": {
+      "configuration": "Minimal-exact request 1; no automatic continuation",
+      "thinkingLevel": "high",
+      "score": 0,
+      "artifactBytes": 0,
+      "durationMs": 13800,
+      "tools": [],
+      "thinkingChars": 3949,
+      "visibleChars": 0,
+      "letMeHits": 4,
+      "stopReasons": ["length"],
+      "browserQaPassed": false
+    },
+    "anchored-no-continuation-max": {
+      "configuration": "Minimal-exact request 1; no automatic continuation",
+      "thinkingLevel": "max",
+      "score": 0,
+      "artifactBytes": 0,
+      "durationMs": 19300,
+      "tools": [],
+      "thinkingChars": 4540,
+      "visibleChars": 0,
+      "letMeHits": 2,
+      "stopReasons": ["length"],
+      "browserQaPassed": false
+    },
+    "anchored-followup-high": {
+      "configuration": "Minimal-exact request 1 followed by a fresh low-level follow-up run",
+      "thinkingLevel": "high",
+      "score": 100,
+      "artifactBytes": 4214,
+      "durationMs": 35800,
+      "tools": ["write"],
+      "thinkingChars": 5014,
+      "visibleChars": 164,
+      "letMeHits": 7,
+      "stopReasons": ["length", "toolUse", "stop"],
+      "browserQaPassed": true
+    },
+    "anchored-followup-max": {
+      "configuration": "Minimal-exact request 1 followed by a fresh low-level follow-up run",
+      "thinkingLevel": "max",
+      "score": 100,
+      "artifactBytes": 7047,
+      "durationMs": 45800,
+      "tools": ["write"],
+      "thinkingChars": 5225,
+      "visibleChars": 343,
+      "letMeHits": 6,
+      "stopReasons": ["length", "toolUse", "stop"],
+      "browserQaPassed": false,
+      "browserQaFailure": "SVG root rendered at 0 by 0 pixels"
+    },
+    "anchored-steer-high": {
+      "configuration": "Minimal-exact request 1 followed by same-run steering continuation",
+      "thinkingLevel": "high",
+      "score": 100,
+      "artifactBytes": 7662,
+      "durationMs": 162500,
+      "tools": ["bash", "read", "write"],
+      "thinkingChars": 36478,
+      "thinkingCharsByResponse": [4250, 32133, 0, 95, 0],
+      "visibleChars": 454,
+      "letMeHits": 55,
+      "stopReasons": ["length", "toolUse", "toolUse", "toolUse", "stop"],
+      "browserQaPassed": true
+    },
+    "anchored-steer-max": {
+      "configuration": "Minimal-exact request 1 followed by same-run steering continuation",
+      "thinkingLevel": "max",
+      "score": 100,
+      "artifactBytes": 14498,
+      "durationMs": 291500,
+      "tools": ["bash", "read", "write"],
+      "thinkingChars": 57966,
+      "thinkingCharsByResponse": [4203, 544, 69, 53042, 108],
+      "visibleChars": 1513,
+      "letMeHits": 27,
+      "stopReasons": ["length", "toolUse", "toolUse", "toolUse", "stop"],
+      "browserQaPassed": true
+    }
+  }
+}

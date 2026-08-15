@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pelican Riding a Bicycle</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(#87ceeb, #e0f6ff);
+    overflow: hidden;
+  }
+  svg { max-width: 100%; height: auto; }
+  .wheel { transform-origin: 50% 50%; animation: spin 1.2s linear infinite; }
+  .pedal { transform-origin: 50% 50%; animation: spin 1.2s linear infinite; }
+  .pelican { animation: bob 0.6s ease-in-out infinite; }
+  .leg { animation: leg 0.6s ease-in-out infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes leg {
+    0%, 100% { transform: rotate(18deg); }
+    50% { transform: rotate(-18deg); }
+  }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 600 500" width="600" height="500" xmlns="http://www.w3.org/2000/svg">
+  <!-- ground -->
+  <line x1="20" y1="440" x2="580" y2="440" stroke="#7a6a4f" stroke-width="4" stroke-linecap="round"/>
+
+  <g class="pelican">
+    <!-- tail -->
+    <path d="M240 210 Q210 240 205 275 Q225 250 245 240 Z" fill="#3d3d3d"/>
+    <!-- body -->
+    <ellipse cx="290" cy="245" rx="65" ry="45" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="2"/>
+    <!-- wing -->
+    <path d="M255 235 Q290 210 330 235 Q300 260 255 235 Z" fill="#e6e6e6" stroke="#cfcfcf" stroke-width="2"/>
+    <!-- neck -->
+    <path d="M330 220 Q355 190 345 155 Q355 170 360 195 Q365 215 355 235 Z" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="2"/>
+    <!-- head -->
+    <ellipse cx="352" cy="150" rx="20" ry="17" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="2"/>
+    <!-- eye -->
+    <circle cx="358" cy="146" r="3" fill="#111"/>
+    <!-- beak -->
+    <path d="M368 150 L405 158 L368 164 Q372 157 368 150 Z" fill="#f2a900"/>
+    <!-- pouch -->
+    <path d="M372 158 Q390 175 404 160 Q388 172 372 158 Z" fill="#ffd166"/>
+
+    <!-- legs -->
+    <g class="leg" style="transform-origin: 300px 290px;">
+      <line x1="300" y1="288" x2="318" y2="330" stroke="#f2a900" stroke-width="6" stroke-linecap="round"/>
+      <line x1="318" y1="330" x2="308" y2="348" stroke="#f2a900" stroke-width="5" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- bicycle frame -->
+  <g stroke="#c0392b" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="210" cy="360" r="52"/>
+    <circle cx="410" cy="360" r="52"/>
+    <line x1="210" y1="360" x2="410" y2="360"/>
+    <line x1="210" y1="360" x2="300" y2="270"/>
+    <line x1="300" y1="270" x2="410" y2="360"/>
+    <line x1="300" y1="270" x2="340" y2="360"/>
+    <line x1="210" y1="360" x2="250" y2="320"/>
+  </g>
+
+  <!-- front wheel -->
+  <g class="wheel">
+    <circle cx="410" cy="360" r="52" fill="none" stroke="#333" stroke-width="5"/>
+    <line x1="410" y1="308" x2="410" y2="412" stroke="#333" stroke-width="3"/>
+    <line x1="358" y1="360" x2="462" y2="360" stroke="#333" stroke-width="3"/>
+  </g>
+  <!-- rear wheel -->
+  <g class="wheel">
+    <circle cx="210" cy="360" r="52" fill="none" stroke="#333" stroke-width="5"/>
+    <line x1="210" y1="308" x2="210" y2="412" stroke="#333" stroke-width="3"/>
+    <line x1="158" y1="360" x2="262" y2="360" stroke="#333" stroke-width="3"/>
+  </g>
+
+  <!-- crank + pedals -->
+  <g class="pedal" style="transform-origin: 340px 360px;">
+    <line x1="340" y1="360" x2="340" y2="392" stroke="#333" stroke-width="5"/>
+    <rect x="324" y="390" width="32" height="8" rx="3" fill="#333"/>
+    <line x1="340" y1="360" x2="340" y2="328" stroke="#333" stroke-width="5"/>
+    <rect x="324" y="324" width="32" height="8" rx="3" fill="#333"/>
+  </g>
+
+  <!-- handlebars -->
+  <path d="M410 360 L300 270 L290 262" fill="none" stroke="#c0392b" stroke-width="5" stroke-linecap="round"/>
+  <line x1="285" y1="262" x2="298" y2="255" stroke="#c0392b" stroke-width="5" stroke-linecap="round"/>
+  <!-- seat -->
+  <line x1="250" y1="320" x2="300" y2="270" stroke="#c0392b" stroke-width="5"/>
+  <rect x="238" y="312" width="30" height="8" rx="4" fill="#333"/>
+</svg>
+</body>
+</html>
