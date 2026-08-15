@@ -7,8 +7,9 @@ Pi. Inspired by
 [xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard),
 it implements first-request conditioning through Pi's dynamic tool loading:
 
-- only recognized DeepSeek V4 Pro model IDs activate the workaround; all other
-  models keep ordinary Pi behavior;
+- the workaround activates only when the current model ID or display name
+  contains `deepseek-v4-pro` (case-insensitive); all other models keep ordinary
+  Pi behavior;
 - a target model's blank-session first provider request uses the exact Minimal
   persona, only `bash` + `read`, `max_tokens: 1024`, and no generated workspace
   or skill-catalog sections;

@@ -1,8 +1,8 @@
 /**
  * Anchored Standard — core logic inspired by xiaobright/dsh-anchored-standard.
  *
- * Improves DeepSeek V4 Pro 0813 behavior by bootstrapping only recognized
- * DeepSeek V4 Pro model IDs with a Minimal-aligned tool catalog (platform shell
+ * Improves DeepSeek V4 Pro 0813 behavior when the active model ID or name
+ * contains `deepseek-v4-pro`, using a Minimal-aligned tool catalog (platform shell
  * + read), then restoring the exact pre-bootstrap tool list after the first tool
  * call or assistant message. Other models are never bootstrapped. Session state
  * is derived from the durable transcript, so resume, fork, and reload preserve it.
@@ -41,16 +41,12 @@ export interface AnchoredStandardOptions {
 /** Bootstrap persona used by the DeepSeek V4 Pro workaround. */
 export const ANCHORED_MINIMAL_PROMPT = "You are a helpful software engineer assistant.";
 
-const DEEPSEEK_V4_PRO_MODEL_IDS = new Set([
-	"deepseek-v4-pro",
-	"deepseek-v4-pro-0813",
-	"deepseek/deepseek-v4-pro",
-	"deepseek/deepseek-v4-pro-0813",
-]);
-
-/** Whether the active Pi model is a DeepSeek V4 Pro variant targeted by this workaround. */
+/** Whether the active Pi model ID or name contains the targeted model marker. */
 export function isDeepSeekV4ProModel(ctx: Pick<ExtensionContext, "model">): boolean {
-	return DEEPSEEK_V4_PRO_MODEL_IDS.has(ctx.model?.id.toLowerCase() ?? "");
+	const model = ctx.model;
+	return !!model && [model.id, model.name].some(
+		(value) => value?.toLowerCase().includes("deepseek-v4-pro") ?? false,
+	);
 }
 
 export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {

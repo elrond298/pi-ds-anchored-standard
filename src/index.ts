@@ -1,8 +1,8 @@
 /**
  * pi-ds-anchored-standard — a DeepSeek V4 Pro 0813 performance workaround.
  *
- * Only recognized DeepSeek V4 Pro model IDs receive the Minimal first request:
- * exact persona, `bash` + `read`, `max_tokens: 1024`, and no generated
+ * Models whose ID or name contains `deepseek-v4-pro` receive the Minimal first
+ * request: exact persona, `bash` + `read`, `max_tokens: 1024`, and no generated
  * workspace/skill context. All other models keep ordinary Pi behavior. After a
  * target session's first tool call or assistant message, the normal Pi prompt,
  * output limit, and all enabled tools return.

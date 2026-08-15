@@ -27,7 +27,7 @@
 
 第一次请求也不会包含 Pi 自动生成的操作说明、工作区上下文、AGENTS.md/CLAUDE.md 内容、技能目录，以及其他扩展追加的提示词。
 
-模型检查接受以下 Pi model ID：`deepseek-v4-pro`、`deepseek-v4-pro-0813`、`deepseek/deepseek-v4-pro` 和 `deepseek/deepseek-v4-pro-0813`。当前模型不匹配这些 ID 时，本扩展不会修改提示词、上下文、工具或输出上限。
+当前模型的 ID 或显示名称只要包含 `deepseek-v4-pro`（不区分大小写），本扩展就会启用。否则不会修改提示词、上下文、工具或输出上限。
 
 ### 第一次工具调用或回复之后
 
@@ -46,7 +46,7 @@
 
 核心逻辑位于 [`src/phases.ts`](src/phases.ts)：
 
-1. 每个事件都会检查当前 model ID。非目标模型直接保留全部已启用工具和未经修改的请求。
+1. 每个事件都会检查当前 model ID 或显示名称是否包含 `deepseek-v4-pro`。非目标模型保留原有工具和未经修改的请求。
 2. `session_start` 和 `before_agent_start` 检查已保存的对话。DeepSeek V4 Pro 会话中只要已有 assistant 回复或工具结果，就视为已经提升。
 3. 第一次调用模型之前，`before_agent_start` 保存 Pi 的正常系统提示词，并暂时只启用 `bash` 和 `read`。
 4. `before_provider_request` 重写最终发送给模型 API 的第一次请求，确保提示词、消息、工具定义和 1,024-token 上限完全符合预期。

@@ -62,8 +62,16 @@ describe("model gating", () => {
 		"deepseek-v4-pro-0813",
 		"deepseek/deepseek-v4-pro",
 		"deepseek/deepseek-v4-pro-0813",
+		"vendor/deepseek-v4-pro-custom",
+		"Vendor/DeepSeek-V4-Pro-Latest",
 	])("recognizes targeted model id %s", (id) => {
 		expect(isDeepSeekV4ProModel(makeCtx([], id) as any)).toBe(true);
+	});
+
+	it("recognizes the marker in the model name", () => {
+		expect(isDeepSeekV4ProModel({
+			model: { id: "provider-alias", name: "vendor/deepseek-v4-pro-preview" },
+		} as any)).toBe(true);
 	});
 
 	it.each(["deepseek-v4-flash", "gpt-5.4"])(

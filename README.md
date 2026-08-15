@@ -37,10 +37,9 @@ Pi's generated instructions, workspace context, AGENTS.md/CLAUDE.md content,
 skill catalog, and prompt additions from other extensions are also left out of
 that request.
 
-The model check accepts the Pi model IDs `deepseek-v4-pro`,
-`deepseek-v4-pro-0813`, `deepseek/deepseek-v4-pro`, and
-`deepseek/deepseek-v4-pro-0813`. If the active model does not match one of these
-IDs, the extension does not alter the prompt, context, tools, or output limit.
+The extension activates when the active model ID or display name contains
+`deepseek-v4-pro` (case-insensitive). If it does not, the extension leaves the
+prompt, context, tools, and output limit unchanged.
 
 ### After the first tool call or reply
 
@@ -64,8 +63,9 @@ interrupted work while gaining the normal Pi prompt, tools, and output limit.
 
 The core implementation is [`src/phases.ts`](src/phases.ts):
 
-1. Each event checks the active model ID. Non-target models immediately keep all
-   enabled Pi tools and their unchanged request.
+1. Each event checks whether the active model ID or name contains
+   `deepseek-v4-pro`. Non-target models keep their enabled tools and unchanged
+   request.
 2. `session_start` and `before_agent_start` inspect the saved conversation. A
    DeepSeek V4 Pro session with any assistant reply or tool result is already
    promoted.
