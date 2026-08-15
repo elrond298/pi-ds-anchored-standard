@@ -2,12 +2,13 @@
 	"name": "pi-ds-anchored-standard",
 	"version": "0.1.0",
 	"type": "module",
-	"description": "Pi extension: Minimal-exact first request (bash + read, 1024-token cap, no workspace/skill context), then promote to the full catalog.",
+	"description": "Pi extension: start with a minimal first request, then restore Pi's normal prompt and all enabled tools.",
 	"author": "ck",
 	"license": "MIT",
 	"files": [
 		"src",
 		"README.md",
+		"README.zh-CN.md",
 		"LICENSE"
 	],
 	"keywords": [

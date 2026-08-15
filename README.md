@@ -1,61 +1,74 @@
 # pi-ds-anchored-standard
 
-A Pi extension that anchors the first model request with a deliberately minimal
-prompt and tool catalog, then restores the normal Pi environment for the rest of
-the session.
+[简体中文](README.zh-CN.md)
+
+A Pi extension that gives the model a deliberately small environment for its
+first request, then returns Pi to normal for the rest of the session.
 
 The design is inspired by
 [`xiaobright/dsh-anchored-standard`](https://github.com/xiaobright/dsh-anchored-standard).
-This package implements the same first-request conditioning idea using Pi's
-extension events and dynamic tool loading.
+This package applies the same first-request conditioning idea through Pi's
+extension API.
 
-## What it does
+## What changes
 
-For a blank session, request 1 is reduced to:
+### First request only
 
-| field | value |
+When a blank session sends its first request to the model API, the model sees:
+
+| Part of the request | Value |
 |---|---|
-| system prompt | `You are a helpful software engineer assistant.` |
-| tools | `bash`, `read` |
-| output budget | `max_tokens: 1024` |
-| messages | the system prompt and current user message only |
+| System prompt | `You are a helpful software engineer assistant.` |
+| Available tools | `bash` and `read` |
+| Maximum output | 1,024 tokens |
+| Conversation | The system prompt and current user message only |
 
-Pi's generated workspace instructions, context files, skill catalog, tool
-instructions, and later extension prompt additions are excluded from that first
-provider request.
+“Available tools” means the function definitions shown to the model—the actions
+it knows it can call. Pi normally shows every enabled built-in tool and every
+tool registered by installed extensions. This extension shows only `bash` and
+`read` on the first request.
 
-The session promotes on the first configured durable signal—the first tool call
-or first completed assistant message by default. From the next request onward,
-the extension restores:
+Pi's generated instructions, workspace context, AGENTS.md/CLAUDE.md content,
+skill catalog, and prompt additions from other extensions are also left out of
+that request.
 
-- the full registered tool catalog;
-- Pi's normal system prompt and context;
-- prompt additions from other installed extensions;
-- the provider's normal output budget.
+### After the first tool call or reply
 
-If the 1024-token bootstrap response ends with `stopReason: "length"`, the
-extension promotes and queues one hidden steering continuation inside the same
-agent run. This avoids stopping at the bootstrap limit without restarting the
-model's work as a separate follow-up turn.
+As soon as the model calls a tool or completes its first reply, the extension
+returns the session to ordinary Pi behavior:
 
-## How it works
+- every currently enabled Pi tool is available;
+- Pi's normal system prompt and workspace context return;
+- prompt additions from other extensions return;
+- the model's usual maximum output limit returns.
 
-The implementation lives in [`src/phases.ts`](src/phases.ts):
+The extension calls this transition **promotion**. By default, either a tool call
+or a completed assistant reply triggers it.
 
-1. `session_start` and `before_agent_start` derive the phase from the durable
-   transcript and activate either the bootstrap tools or the full catalog.
-2. `before_agent_start` captures the normal Pi prompt before temporarily
-   replacing it with the minimal persona.
-3. `before_provider_request` enforces the final request-1 shape after Pi builds
-   the provider payload: exact prompt, tool schemas, message list, and token limit.
-4. `tool_call` and `message_end` promote according to `promoteOn`.
-5. A length-truncated bootstrap response uses `deliverAs: "steer"` to continue
-   once with the restored runtime.
+If the first response consumes all 1,024 tokens, Pi would normally stop with
+`stopReason: "length"`. The extension instead promotes the session and sends one
+hidden instruction to continue inside the same agent run. The model keeps its
+interrupted work while gaining the normal Pi prompt, tools, and output limit.
 
-No phase flag is persisted. Any assistant or tool-result entry in the session
-transcript means the session is already promoted, so resume, fork, and reload
-retain the correct phase. If a configured bootstrap tool is unavailable, the
-extension degrades to the full catalog instead of exposing an incomplete set.
+## How it is implemented
+
+The core implementation is [`src/phases.ts`](src/phases.ts):
+
+1. `session_start` and `before_agent_start` inspect the saved conversation. A
+   session with any assistant reply or tool result is already promoted.
+2. Before the first model call, `before_agent_start` saves Pi's normal system
+   prompt and temporarily selects only `bash` and `read`.
+3. `before_provider_request` rewrites the final request sent to the model API so
+   its prompt, messages, tool definitions, and 1,024-token limit are exact.
+4. `tool_call` and `message_end` detect the first promotion event and restore all
+   tools registered with Pi.
+5. If the first response was cut off by the token limit, `message_end` queues one
+   same-run continuation using Pi's `deliverAs: "steer"` mode.
+
+There is no separate phase file or database entry. The saved conversation is the
+source of truth, so resumed, forked, and reloaded sessions keep the correct
+behavior. If `bash` or `read` is unavailable, the extension safely leaves all Pi
+tools enabled instead of giving the model an incomplete first request.
 
 ## Install
 
@@ -82,68 +95,69 @@ createAnchoredStandard({
 });
 ```
 
-`promoteOn` also accepts `"tool-call"` or `"assistant-message"`.
-Set `minimalPrompt: null` only when you intentionally want Pi's normal prompt
-and context during the bootstrap request.
+`promoteOn` also accepts:
 
-## Validation
+- `"tool-call"`: restore ordinary Pi behavior only after a tool call;
+- `"assistant-message"`: restore it only after the first completed reply.
 
-We ran the same animated-HTML task at `high` and `max` thinking levels with the
-full-catalog control, the initial fresh `followUp`, and the final same-run
-`steer` continuation.
+Set `minimalPrompt: null` only if you want Pi's normal prompt and context to stay
+in the first request.
+
+## Visual validation
+
+We used the same animated-HTML task for six runs at `high` and `max` thinking
+levels. The comparison uses three clearly defined setups:
+
+1. **Ordinary Pi (extension disabled):** the model receives Pi's normal prompt,
+   workspace context, and every enabled tool from the first request. This is the
+   control used to show what Pi does without this extension.
+2. **New follow-up turn (first attempt):** the extension limits the first request,
+   but a truncated response starts a separate follow-up turn. This was an early
+   implementation that lost the model's ongoing reasoning.
+3. **Continue the same run (current behavior):** the extension limits the first
+   request, then continues the interrupted response inside the same agent run
+   with ordinary Pi behavior restored.
 
 <table>
 <thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
 <tbody>
 <tr>
-<th>Full-catalog control</th>
-<td><img src="validation/animated-html/animations/control-high.gif" alt="Control high animation" width="360"></td>
-<td><img src="validation/animated-html/animations/control-max.gif" alt="Control max animation" width="360"></td>
+<th>Ordinary Pi<br>(extension disabled)</th>
+<td><img src="validation/animated-html/animations/control-high.gif" alt="Ordinary Pi, high thinking" width="360"></td>
+<td><img src="validation/animated-html/animations/control-max.gif" alt="Ordinary Pi, max thinking" width="360"></td>
 </tr>
 <tr>
-<th>Fresh <code>followUp</code></th>
-<td><img src="validation/animated-html/animations/followup-high.gif" alt="Follow-up high animation" width="360"></td>
-<td><img src="validation/animated-html/animations/followup-max.gif" alt="Follow-up max blank animation" width="360"></td>
+<th>New follow-up turn<br>(first attempt)</th>
+<td><img src="validation/animated-html/animations/followup-high.gif" alt="Separate follow-up, high thinking" width="360"></td>
+<td><img src="validation/animated-html/animations/followup-max.gif" alt="Separate follow-up, max thinking, blank output" width="360"></td>
 </tr>
 <tr>
-<th>Same-run <code>steer</code></th>
-<td><img src="validation/animated-html/animations/steer-high.gif" alt="Steer high animation" width="360"></td>
-<td><img src="validation/animated-html/animations/steer-max.gif" alt="Steer max animation" width="360"></td>
+<th>Continue the same run<br>(current behavior)</th>
+<td><img src="validation/animated-html/animations/steer-high.gif" alt="Same-run continuation, high thinking" width="360"></td>
+<td><img src="validation/animated-html/animations/steer-max.gif" alt="Same-run continuation, max thinking" width="360"></td>
 </tr>
 </tbody>
 </table>
 
-These are the actual browser-rendered outputs from the checked-in runs. The
-tested agents generated the HTML without previewing or validating it; each
-animation was captured afterward using the same viewport and encoding settings.
+These are browser recordings of the actual checked-in HTML files. The tested
+agents did not preview or validate their own output. The separate follow-up at
+`max` produced a page whose SVG had a `0×0` layout, so its recording is blank.
+Both current same-run continuations rendered correctly.
 
-Visual inspection found that the fresh `followUp` restarted and simplified the
-work: its `max` SVG collapsed to a `0×0` render. Both final `steer` outputs
-rendered correctly, showing that same-run continuation preserved the interrupted
-work while restoring Pi's full runtime.
+The [validation directory](validation/animated-html/) contains all six generated
+HTML files, screenshots, animations, complete sanitized Pi conversations, the
+sanitizer, and a SHA-256 manifest.
 
-The retained evidence under
-[`validation/animated-html/`](validation/animated-html/) contains:
+## Trajectory command
 
-- complete sanitized Pi conversations for the six runs that produced artifacts;
-- each generated HTML file and its browser screenshot;
-- all six browser-recorded animations shown above;
-- the sanitizer and SHA-256 manifest.
-
-See the [validation report](validation/animated-html/README.md) for the visual
-comparison and sanitization details.
-
-## Trajectory signal
-
-The `/trajectory` command reports `let me`, `we`, and `let's` counts, staged
-replies, reasoning-block count, and reasoning-length median. The detector is
-inspired by
+`/trajectory` reports word-frequency and response-shape statistics: `let me`,
+`we`, and `let's` counts, visible reply count, reasoning-block count, and median
+reasoning length. It is inspired by
 [`xiaobright/modeltest`'s DeepSeek V4 trajectory analysis](https://github.com/xiaobright/modeltest/blob/main/docs/v4.1/DEEPSEEK_V4_TRAJECTORY_ANALYSIS_20260814.md).
 
-This fingerprint is a diagnostic signal, not proof that bootstrap promotion
-worked or failed. It was measured on structured engineering tasks and does not
-reliably transfer to creative generation; the animated validation above
-produced many `let me` hits despite a verified bootstrap.
+Treat this output as a clue, not proof that the extension worked or failed. The
+fingerprint came from structured engineering tasks and did not transfer reliably
+to the creative animation task above.
 
 ## Verify
 
@@ -153,18 +167,17 @@ npm test
 npm run typecheck
 ```
 
-The test suite covers phase derivation, exact request-1 shaping, promotion,
-prompt/tool restoration, missing-tool degradation, truncation continuation,
+The tests cover first-request shaping, session detection, tool restoration,
+prompt restoration, missing bootstrap tools, truncated-response continuation,
 and trajectory statistics.
 
 ## Notes
 
-- `pi.setActiveTools()` is process-global, so the extension reasserts each
-  session's derived phase on every `before_agent_start` event.
-- Blocked or failed tool calls still promote because the tool-call signal is
-  durable.
-- The minimal prompt applies only to the bootstrap request. The captured normal
-  Pi prompt returns after promotion.
+- `pi.setActiveTools()` affects the running Pi process, so the extension checks
+  the current session before every user turn and reapplies the right tool list.
+- A blocked or failed first tool call still promotes the session.
+- The minimal prompt applies only to the first request. Pi's saved normal prompt
+  returns after promotion.
 
 ## License
 

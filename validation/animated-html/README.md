@@ -15,11 +15,14 @@ Browser rendering and screenshots were performed afterward.
 All runs used `deepseek/deepseek-v4-pro` with the same installed Pi extensions.
 The retained runs compare:
 
-- **Control:** normal Pi prompt and full tool catalog from request 1.
-- **Follow-up:** a length-truncated bootstrap queued a fresh low-level
-  `followUp` run.
-- **Steer:** a length-truncated bootstrap queued `steer` inside the same agent
-  run, after restoring the normal prompt, tool catalog, and provider budget.
+- **Ordinary Pi (control):** the extension is disabled. The model receives Pi's
+  normal prompt, workspace context, and every enabled tool from the first
+  request. This establishes the baseline for comparison.
+- **New follow-up turn (first attempt):** the extension limits the first request,
+  but a response cut off at 1,024 tokens starts a separate follow-up turn.
+- **Continue the same run (current behavior):** the extension limits the first
+  request, then resumes the interrupted work inside the same agent run after
+  restoring Pi's normal prompt, tools, and output limit.
 
 Each configuration was run at `high` and `max` thinking levels.
 
@@ -29,28 +32,28 @@ Each configuration was run at `high` and `max` thinking levels.
 <thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
 <tbody>
 <tr>
-<th>Control</th>
-<td><img src="animations/control-high.gif" alt="Control high animation" width="360"></td>
-<td><img src="animations/control-max.gif" alt="Control max animation" width="360"></td>
+<th>Ordinary Pi<br>(extension disabled)</th>
+<td><img src="animations/control-high.gif" alt="Ordinary Pi, high thinking" width="360"></td>
+<td><img src="animations/control-max.gif" alt="Ordinary Pi, max thinking" width="360"></td>
 </tr>
 <tr>
-<th>Fresh <code>followUp</code></th>
-<td><img src="animations/followup-high.gif" alt="Follow-up high animation" width="360"></td>
-<td><img src="animations/followup-max.gif" alt="Follow-up max blank animation" width="360"></td>
+<th>New follow-up turn<br>(first attempt)</th>
+<td><img src="animations/followup-high.gif" alt="Separate follow-up, high thinking" width="360"></td>
+<td><img src="animations/followup-max.gif" alt="Separate follow-up, max thinking, blank output" width="360"></td>
 </tr>
 <tr>
-<th>Same-run <code>steer</code></th>
-<td><img src="animations/steer-high.gif" alt="Steer high animation" width="360"></td>
-<td><img src="animations/steer-max.gif" alt="Steer max animation" width="360"></td>
+<th>Continue the same run<br>(current behavior)</th>
+<td><img src="animations/steer-high.gif" alt="Same-run continuation, high thinking" width="360"></td>
+<td><img src="animations/steer-max.gif" alt="Same-run continuation, max thinking" width="360"></td>
 </tr>
 </tbody>
 </table>
 
 Each GIF is a four-second browser recording of its checked-in HTML artifact,
 converted at 540 pixels and 8 fps using the same viewport and encoding settings.
-The control and final steering outputs render as recognizable animated pelicans
-riding bicycles. The fresh follow-up restarted and simplified the work; its max
-output has a `0×0` SVG layout and therefore appears blank.
+The ordinary Pi and current same-run outputs render as recognizable animated
+pelicans riding bicycles. The separate follow-up restarted and simplified the
+work; its max output has a `0×0` SVG layout and therefore appears blank.
 
 ## Preserved conversations
 
