@@ -86,8 +86,9 @@ tool list unchanged instead of applying an incomplete first-request setup.
 ## Install
 
 ```sh
-pi install /path/to/pi-ds-anchored-standard
+pi install git:github.com/elrond298/pi-ds-anchored-standard
 ```
+For a local checkout, use `pi install /path/to/pi-ds-anchored-standard`.
 
 Restart Pi or run `/reload`. For a one-off local run:
 

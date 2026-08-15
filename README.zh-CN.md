@@ -58,8 +58,9 @@
 ## 安装
 
 ```sh
-pi install /path/to/pi-ds-anchored-standard
+pi install git:github.com/elrond298/pi-ds-anchored-standard
 ```
+本地检出可使用 `pi install /path/to/pi-ds-anchored-standard`。
 
 重启 Pi，或者执行 `/reload`。只想临时运行一次时：
 
