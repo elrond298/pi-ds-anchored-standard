@@ -173,8 +173,8 @@ sanitizer, and a SHA-256 manifest.
 ## Trajectory command
 
 `/trajectory` reports word-frequency and response-shape statistics: `let me`,
-`we`, and `let's` counts, visible reply count, reasoning-block count, and median
-reasoning length. It is inspired by
+`we`, `let's`, `I'll` / `I will`, and `We'll` / `We will` counts, visible reply
+count, reasoning-block count, and median reasoning length. It is inspired by
 [`xiaobright/modeltest`'s DeepSeek V4 trajectory analysis](https://github.com/xiaobright/modeltest/blob/main/docs/v4.1/DEEPSEEK_V4_TRAJECTORY_ANALYSIS_20260814.md).
 The command is inactive when the current model is not DeepSeek V4 Pro.
 

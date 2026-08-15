@@ -24,12 +24,14 @@ describe("TrajectoryTracker", () => {
 		const t = new TrajectoryTracker();
 		t.add(
 			assistantMessage([
-				{ type: "thinking", thinking: "Let me plan the approach." },
-				{ type: "text", text: "We need to refactor. Let me check." },
+				{ type: "thinking", thinking: "Let me plan. I'll inspect. We will test." },
+				{ type: "text", text: "We need to refactor. Let me check. I will fix it. We’ll ship." },
 			]),
 		);
 		expect(t.stats().letMe).toBe(2);
-		expect(t.stats().we).toBe(1);
+		expect(t.stats().we).toBe(3);
+		expect(t.stats().iWill).toBe(2);
+		expect(t.stats().weWill).toBe(2);
 	});
 
 	it("counts staged replies and reasoning blocks with p50", () => {

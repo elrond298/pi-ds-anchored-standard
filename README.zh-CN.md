@@ -129,7 +129,7 @@ createAnchoredStandard({
 
 ## 轨迹统计命令
 
-`/trajectory` 会报告词频和回复形态统计：`let me`、`we`、`let's` 的出现次数，可见回复数，reasoning block 数量，以及 reasoning 长度中位数。该功能的灵感来自
+`/trajectory` 会报告词频和回复形态统计：`let me`、`we`、`let's`、`I'll` / `I will`、`We'll` / `We will` 的出现次数，可见回复数，reasoning block 数量，以及 reasoning 长度中位数。该功能的灵感来自
 [`xiaobright/modeltest` 的 DeepSeek V4 轨迹分析](https://github.com/xiaobright/modeltest/blob/main/docs/v4.1/DEEPSEEK_V4_TRAJECTORY_ANALYSIS_20260814.md)。
 当前模型不是 DeepSeek V4 Pro 时，该命令不会启用。
 

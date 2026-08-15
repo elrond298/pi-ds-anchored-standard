@@ -23,8 +23,8 @@ it implements first-request conditioning through Pi's dynamic tool loading:
   without stored state;
 - a missing bootstrap tool leaves Pi's ordinary active tool list unchanged;
 - the bundled `/trajectory` detector runs only for DeepSeek V4 Pro and reports
-  the "let me" word-frequency fingerprint from xiaobright/modeltest as a
-  diagnostic signal, not proof of successful conditioning.
+  word-frequency diagnostics including `let me`, `I'll` / `I will`, and
+  `We'll` / `We will`; they are signals, not proof of successful conditioning.
 
 The package is loaded by Pi from `./src/index.ts` via the `pi.extensions`
 field. Core logic lives in `src/phases.ts` (the `createAnchoredStandard`

@@ -28,7 +28,7 @@ export default function anchoredStandard(pi: ExtensionAPI): void {
 
 	pi.registerCommand("trajectory", {
 		description:
-			"Show DeepSeek V4 Pro trajectory stats (let me / we / let's fingerprint)",
+			"Show DeepSeek V4 Pro trajectory stats (let me / we / let's / future-tense fingerprint)",
 		handler: async (_args, ctx: ExtensionCommandContext) => {
 			if (!isDeepSeekV4ProModel(ctx)) {
 				ctx.ui.notify("trajectory inactive — pi-ds-anchored-standard only applies to DeepSeek V4 Pro", "info");
@@ -40,7 +40,8 @@ export default function anchoredStandard(pi: ExtensionAPI): void {
 				: `anchored-like signal — ${s.letMe} "let me" hit${s.letMe === 1 ? "" : "s"}`;
 			ctx.ui.notify(
 				`trajectory (${s.assistantMessages} assistant msgs): ${verdict}` +
-					` — we ${s.we}, let's ${s.lets}, ${s.stagedReplies} staged replies,` +
+					` — we ${s.we}, let's ${s.lets}, i'll/i will ${s.iWill},` +
+					` we'll/we will ${s.weWill}, ${s.stagedReplies} staged replies,` +
 					` ${s.reasoningBlocks} reasoning blocks (p50 ${s.reasoningP50} chars)`,
 				s.drift ? "warning" : "info",
 			);
