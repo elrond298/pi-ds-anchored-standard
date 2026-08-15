@@ -1,0 +1,38 @@
+{
+	"name": "pi-anchored-standard",
+	"version": "0.1.0",
+	"type": "module",
+	"description": "Pi extension: bootstrap with a Minimal tool catalog (bash + read), promote to the full catalog after the first tool call or assistant message. Port of dsh-anchored-standard.",
+	"author": "ck",
+	"license": "MIT",
+	"files": [
+		"src",
+		"README.md",
+		"LICENSE"
+	],
+	"keywords": [
+		"pi-package",
+		"pi",
+		"agent",
+		"tools",
+		"bootstrap",
+		"anchored-standard"
+	],
+	"pi": {
+		"extensions": [
+			"./src/index.ts"
+		]
+	},
+	"scripts": {
+		"typecheck": "tsc -p tsconfig.json --noEmit",
+		"test": "vitest run"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "*"
+	},
+	"devDependencies": {
+		"@types/node": "^24.5.2",
+		"typescript": "^5.9.3",
+		"vitest": "^3.2.4"
+	}
+}
