@@ -7,9 +7,6 @@ continuation in `pi-ds-anchored-standard`.
 
 > Generate an HTML containing an animated SVG of a pelican riding a bicycle. Do not test or validate it yourself.
 
-The tested agents generated their files without previewing or validating them.
-Browser rendering and screenshots were performed afterward.
-
 ## Runs retained
 
 All runs used DeepSeek V4 Pro 0813, exposed in Pi as
@@ -40,7 +37,7 @@ Each configuration was run at `high` and `max` thinking levels.
 <tr>
 <th>New follow-up turn<br>(first attempt)</th>
 <td><img src="animations/followup-high.gif" alt="Separate follow-up, high thinking" width="360"></td>
-<td><img src="animations/followup-max.gif" alt="Separate follow-up, max thinking, blank output" width="360"></td>
+<td><img src="animations/followup-max.gif" alt="Separate follow-up, max thinking" width="360"></td>
 </tr>
 <tr>
 <th>Continue the same run<br>(current behavior)</th>
@@ -50,13 +47,9 @@ Each configuration was run at `high` and `max` thinking levels.
 </tbody>
 </table>
 
-Each GIF is a four-second browser recording of its checked-in HTML artifact,
-converted at 540 pixels and 8 fps using the same viewport and encoding settings.
-The current same-run outputs are visibly more detailed and coherent than the
-ordinary Pi controls in this test, especially the `max` result's rider pose,
-helmet, fish, bicycle linkage, and scenery. The separate follow-up restarted and
-simplified the work; its max output has a `0×0` SVG layout and therefore appears
-blank. This is visual evidence from one task, not a general benchmark.
+In this test, the current behavior produced more detailed and coherent results
+than ordinary Pi, especially at `max`. This is one visual example, not a general
+benchmark.
 
 ## Preserved conversations
 

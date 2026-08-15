@@ -106,7 +106,7 @@ createAnchoredStandard({
 <tr>
 <th>新建后续轮次<br>（早期方案）</th>
 <td><img src="validation/animated-html/animations/followup-high.gif" alt="新建后续轮次，high 思考级别" width="360"></td>
-<td><img src="validation/animated-html/animations/followup-max.gif" alt="新建后续轮次，max 思考级别，空白输出" width="360"></td>
+<td><img src="validation/animated-html/animations/followup-max.gif" alt="新建后续轮次，max 思考级别" width="360"></td>
 </tr>
 <tr>
 <th>在同一次运行中继续<br>（当前方案）</th>
@@ -116,7 +116,7 @@ createAnchoredStandard({
 </tbody>
 </table>
 
-这些动画来自仓库中实际 HTML 文件的浏览器录制。被测试的 agent 没有自行预览或验证输出。`max` 思考级别下，早期“新建后续轮次”方案生成的 SVG 布局大小为 `0×0`，所以录制结果是空白的；当前方案的两次输出都能正常渲染。与普通 Pi 对照组相比，当前方案的结果在这个测试中明显更丰富、更连贯，尤其是 `max` 结果加入了更清晰的骑行姿势、头盔、鱼、自行车结构和场景细节。这说明本 workaround 在该可视化测试中确实带来了改善，但不代表所有任务都会获得同样收益。
+在这个测试中，当前方案生成的结果比普通 Pi 更丰富、更连贯，`max` 下尤其明显。这里只展示一个可视化示例，不代表所有任务都会获得同样收益。
 
 [验证目录](validation/animated-html/)保存了六个 HTML 文件、截图、动画、完整且已脱敏的 Pi 对话、脱敏脚本和 SHA-256 清单。
 

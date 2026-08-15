@@ -143,7 +143,7 @@ levels. The comparison uses three clearly defined setups:
 <tr>
 <th>New follow-up turn<br>(first attempt)</th>
 <td><img src="validation/animated-html/animations/followup-high.gif" alt="Separate follow-up, high thinking" width="360"></td>
-<td><img src="validation/animated-html/animations/followup-max.gif" alt="Separate follow-up, max thinking, blank output" width="360"></td>
+<td><img src="validation/animated-html/animations/followup-max.gif" alt="Separate follow-up, max thinking" width="360"></td>
 </tr>
 <tr>
 <th>Continue the same run<br>(current behavior)</th>
@@ -153,14 +153,9 @@ levels. The comparison uses three clearly defined setups:
 </tbody>
 </table>
 
-These are browser recordings of the actual checked-in HTML files. The tested
-agents did not preview or validate their own output. The separate follow-up at
-`max` produced a page whose SVG had a `0×0` layout, so its recording is blank.
-Both current same-run continuations rendered correctly. Compared with the
-ordinary Pi outputs, they are visibly more detailed and coherent—the `max`
-result adds a clearer rider pose, helmet, fish, bicycle linkage, and scenery.
-This is a real improvement in this visual test, not a claim of universal gains
-across every task.
+In this test, the current behavior produced more detailed and coherent results
+than ordinary Pi, especially at `max`. This is one visual example, not a general
+benchmark.
 
 The [validation directory](validation/animated-html/) contains all six generated
 HTML files, screenshots, animations, complete sanitized Pi conversations, the
