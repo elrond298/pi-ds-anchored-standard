@@ -19,11 +19,11 @@
 | 请求内容 | 值 |
 |---|---|
 | 系统提示词 | `You are a helpful software engineer assistant.` |
-| 可用工具 | `bash` 和 `read` |
-| 最大输出 | 1,024 tokens |
+| 可用工具 | Minimal 的 `bash` 和 `str_replace_editor` schema |
+| 最大输出 | provider 默认值（首轮不封顶） |
 | 对话内容 | 系统提示词和当前用户消息 |
 
-“可用工具”是指发送给模型的函数定义，也就是模型知道自己可以调用哪些操作。正常情况下，Pi 会把所有已启用的内置工具，以及其他扩展注册的工具都展示给模型；本扩展在第一次请求中只展示 `bash` 和 `read`。
+“可用工具”是指发送给模型的函数定义，也就是模型知道自己可以调用哪些操作。正常情况下，Pi 会展示所有已启用工具；本扩展在第一次请求中只展示 Minimal 的 `bash` + `str_replace_editor` 工具对。它为 Pi 注册可用的 UTF-8 `str_replace_editor`，并把首轮的 `bash` 定义改写为 Minimal schema。
 
 第一次请求也不会包含 Pi 自动生成的操作说明、工作区上下文、AGENTS.md/CLAUDE.md 内容、技能目录，以及其他扩展追加的提示词。
 
@@ -40,7 +40,7 @@
 
 本项目把这个切换称为 **promotion（提升）**。默认配置下，第一次工具调用和第一次完整回复都可以触发提升。
 
-如果第一次回复用完 1,024 tokens，Pi 通常会以 `stopReason: "length"` 停止。本扩展会先提升会话，再发送一条隐藏指令，让模型在同一次 agent 运行中继续。这样既保留了已经进行到一半的工作，也能使用恢复后的 Pi 提示词、工具和输出上限。
+如果第一次回复达到 provider 的输出上限，Pi 通常会以 `stopReason: "length"` 停止。本扩展会先提升会话，再发送一条隐藏指令，让模型在同一次 agent 运行中继续，并使用恢复后的 Pi 提示词和工具。
 
 ## 实现方式
 
@@ -48,12 +48,12 @@
 
 1. 每个事件都会检查当前 model ID 或显示名称是否包含 `deepseek-v4-pro`。非目标模型保留原有工具和未经修改的请求。
 2. `session_start` 和 `before_agent_start` 检查已保存的对话。DeepSeek V4 Pro 会话中只要已有 assistant 回复或工具结果，就视为已经提升。
-3. 第一次调用模型之前，`before_agent_start` 保存 Pi 的正常系统提示词，并暂时只启用 `bash` 和 `read`。
-4. `before_provider_request` 重写最终发送给模型 API 的第一次请求，确保提示词、消息、工具定义和 1,024-token 上限完全符合预期。
+3. 第一次调用模型之前，`before_agent_start` 保存 Pi 的正常系统提示词，并暂时只启用 `bash` 和 `str_replace_editor`。
+4. `before_provider_request` 重写第一次请求的提示词、消息和工具定义，使其与 Minimal 对齐，同时保留 provider 的输出预算。
 5. `tool_call` 和 `message_end` 检测第一次提升事件，并恢复首轮精简前的准确工具列表。
 6. 如果第一次回复被 token 上限截断，`message_end` 会通过 Pi 的 `deliverAs: "steer"` 模式，在同一次运行中继续一次。
 
-本扩展不单独保存阶段文件，也不写入额外数据库。已保存的对话就是状态来源，因此恢复、分叉或重新加载会话时，行为仍然正确。如果 `bash` 或 `read` 不可用，扩展会保持 Pi 当前工具列表不变，而不会应用残缺的首轮配置。
+本扩展不单独保存阶段文件，也不写入额外数据库。已保存的对话就是状态来源，因此恢复、分叉或重新加载会话时，行为仍然正确。如果任一 bootstrap 工具不可用，扩展会保持 Pi 当前工具列表不变，而不会应用残缺的首轮配置。
 
 ## 安装
 
@@ -74,12 +74,12 @@ pi -e ./src/index.ts
 
 ```ts
 createAnchoredStandard({
-  bootstrapTools: ["bash", "read"],
-  bootstrapMaxTokens: 1024,
+  bootstrapTools: ["bash", "str_replace_editor"],
   promoteOn: "either",
   minimalPrompt: ANCHORED_MINIMAL_PROMPT,
 });
 ```
+`bootstrapMaxTokens` 默认不设置，因此沿用 provider 的正常输出预算。只有需要首轮封顶时，才把它设为正整数。
 
 `promoteOn` 还支持：
 
@@ -94,8 +94,8 @@ createAnchoredStandard({
 
 1. **普通 Pi（未启用本扩展）**：模型从第一次请求开始就能看到 Pi 的正常提示词、工作区上下文和所有已启用工具。这是对照组，用来展示不启用本扩展时 Pi 的表现。
 2. **新建后续轮次（早期方案）**：本扩展会精简第一次请求，但回复被截断后，会新建一个后续轮次。这个早期实现丢失了模型正在进行的推理状态。
-3. **在同一次运行中继续（当前方案）**：第一次请求限制为 1,024 tokens；回复被截断后，在同一次 agent 运行中继续，并恢复普通 Pi 的环境。
-4. **30,000-token 首轮**：只把当前方案的 `bootstrapMaxTokens` 从 1,024 提高到 30,000。
+3. **1,024-token 同轮续写（旧默认值）**：首轮截断后在同一次 agent 运行中继续，并恢复普通 Pi。
+4. **30,000-token 实验**：旧版 `bash` + `read` 实现把 `bootstrapMaxTokens` 设为 30,000。
 
 <table>
 <thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
@@ -111,17 +111,18 @@ createAnchoredStandard({
 <td><img src="validation/animated-html/animations/followup-max.gif" alt="新建后续轮次，max 思考级别" width="360"></td>
 </tr>
 <tr>
-<th>在同一次运行中继续<br>（当前方案）</th>
+<th>1,024-token 同轮续写<br>（旧默认值）</th>
 <td><img src="validation/animated-html/animations/steer-high.gif" alt="同一次运行内继续，high 思考级别" width="360"></td>
 <td><img src="validation/animated-html/animations/steer-max.gif" alt="同一次运行内继续，max 思考级别" width="360"></td>
 </tr>
 <tr>
-<th>30,000-token 首轮</th>
+<th>30,000-token 实验</th>
 <td><img src="validation/animated-html/animations/bootstrap-30k-high.gif" alt="30,000-token 首轮，high 思考级别" width="360"></td>
 <td><img src="validation/animated-html/animations/bootstrap-30k-max.gif" alt="30,000-token 首轮，max 思考级别" width="360"></td>
 </tr>
 </tbody>
 </table>
+这些归档运行使用旧版 `bash` + `read` bootstrap，并比较其 1,024-token 默认值与 30,000-token 封顶；当前不封顶的 Minimal 工具对尚未包含在动画中。
 
 提高首轮 token 上限没有稳定改善表现：`high` 更慢且视觉效果更差；`max` 的画面更干净，但耗时从 291.5 秒增加到 850.8 秒。这里只展示一个可视化示例，不代表一般结论。
 

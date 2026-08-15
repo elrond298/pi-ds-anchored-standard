@@ -10,6 +10,7 @@ interface Entry {
 
 function makePi(initialTools = TOOLS) {
 	// Ordinary Pi may have any user-selected active tool subset.
+	const tools = TOOLS.map((name) => ({ name, description: "", parameters: {} }));
 	let active = [...initialTools];
 	const sent: Array<{ message: any; options: any }> = [];
 	const handlers = new Map<string, Array<(event: any, ctx: any) => any>>();
@@ -21,7 +22,11 @@ function makePi(initialTools = TOOLS) {
 			return [...sent];
 		},
 		getActiveTools: () => [...active],
-		getAllTools: () => TOOLS.map((name) => ({ name, description: "", parameters: {} })),
+		getAllTools: () => [...tools],
+		registerTool: (tool: any) => {
+			tools.push(tool);
+			active.push(tool.name);
+		},
 		setActiveTools: (names: string[]) => {
 			active = [...names];
 		},
@@ -132,7 +137,7 @@ describe("model gating", () => {
 			makeCtx([], "deepseek-v4-pro"),
 		);
 
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "str_replace_editor"]);
 		expect(result.systemPrompt).toBe(ANCHORED_MINIMAL_PROMPT);
 	});
 
@@ -165,16 +170,16 @@ describe("model gating", () => {
 });
 
 describe("bootstrap phase", () => {
-	it("starts a new session with only shell + read active", async () => {
+	it("starts a new session with the Minimal tool pair active", async () => {
 		const { pi } = setup();
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "str_replace_editor"]);
 	});
 
 	it("keeps the bootstrap catalog on the first user turn", async () => {
 		const { pi } = setup();
 		const result = await pi.emit("before_agent_start", { type: "before_agent_start" }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "str_replace_editor"]);
 		expect(result.systemPrompt).toBe(ANCHORED_MINIMAL_PROMPT);
 	});
 
@@ -188,7 +193,7 @@ describe("bootstrap phase", () => {
 		const { pi } = setup();
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("message_end", { type: "message_end", message: { role: "user" } }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "str_replace_editor"]);
 	});
 });
 
@@ -220,7 +225,7 @@ describe("promotion", () => {
 		const { pi } = setup({ promoteOn: "tool-call" });
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "str_replace_editor"]);
 		await pi.emit("tool_call", { type: "tool_call", toolName: "read" }, makeCtx());
 		expect(pi.active.sort()).toEqual([...TOOLS].sort());
 	});
@@ -229,14 +234,14 @@ describe("promotion", () => {
 		const { pi } = setup({ promoteOn: "assistant-message" });
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("tool_call", { type: "tool_call", toolName: "bash" }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "str_replace_editor"]);
 		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
 		expect(pi.active.sort()).toEqual([...TOOLS].sort());
 	});
 });
 
 describe("bootstrap provider payload", () => {
-	it("caps the first provider request to 1024 tokens", async () => {
+	it("leaves the first provider request uncapped by default", async () => {
 		const { pi } = setup();
 		const payload = { max_tokens: 384_000 };
 		const result = await pi.emit(
@@ -244,12 +249,26 @@ describe("bootstrap provider payload", () => {
 			{ type: "before_provider_request", payload },
 			makeCtx(),
 		);
-		expect(result).toEqual({ max_tokens: 1024 });
+		expect(result).toEqual({ max_tokens: 384_000 });
 		expect(payload.max_tokens).toBe(384_000);
+	});
+
+	it("applies an opt-in bootstrap token cap", async () => {
+		const { pi } = setup({ bootstrapMaxTokens: 1024 });
+		const result = await pi.emit(
+			"before_provider_request",
+			{ type: "before_provider_request", payload: { max_tokens: 384_000 } },
+			makeCtx(),
+		);
+		expect(result.max_tokens).toBe(1024);
 	});
 
 	it("strips late prompt, tool, and context injections", async () => {
 		const { pi } = setup();
+		const providerTools = pi.getAllTools().map((tool: any) => ({
+			type: "function",
+			function: { name: tool.name, description: tool.description, parameters: tool.parameters },
+		}));
 		const result = await pi.emit(
 			"before_provider_request",
 			{
@@ -261,13 +280,26 @@ describe("bootstrap provider payload", () => {
 						{ role: "user", content: "actual request" },
 						{ role: "user", content: "injected skill catalog" },
 					],
-					tools: TOOLS.map((name) => ({ name })),
+					tools: providerTools,
 				},
 			},
 			makeCtx(),
 		);
-		expect(result.max_tokens).toBe(1024);
-		expect(result.tools).toEqual([{ name: "bash" }, { name: "read" }]);
+		expect(result.max_tokens).toBe(384_000);
+		expect(result.tools.map((tool: any) => tool.function.name)).toEqual([
+			"bash",
+			"str_replace_editor",
+		]);
+		const bash = result.tools[0].function;
+		expect(bash.parameters.required).toEqual(["command"]);
+		expect(Object.keys(bash.parameters.properties)).toEqual(["command"]);
+		const editor = result.tools[1].function;
+		expect(editor.parameters.properties.command.enum).toEqual([
+			"view",
+			"create",
+			"str_replace",
+			"insert",
+		]);
 		expect(result.messages).toEqual([
 			{ role: "system", content: ANCHORED_MINIMAL_PROMPT },
 			{ role: "user", content: "actual request" },

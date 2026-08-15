@@ -2,9 +2,9 @@
  * Anchored Standard — core logic inspired by xiaobright/dsh-anchored-standard.
  *
  * Improves DeepSeek V4 Pro 0813 behavior when the active model ID or name
- * contains `deepseek-v4-pro`, using a Minimal-aligned tool catalog (platform shell
- * + read), then restoring the exact pre-bootstrap tool list after the first tool
- * call or assistant message. Other models are never bootstrapped. Session state
+ * contains `deepseek-v4-pro`, using the Minimal tool pair (`bash` +
+ * `str_replace_editor`), then restoring the exact pre-bootstrap tool list after
+ * the first tool call or assistant message. Other models are never bootstrapped.
  * is derived from the durable transcript, so resume, fork, and reload preserve it.
  *
  * The method is inspired by xiaobright/dsh-anchored-standard and implemented
@@ -22,11 +22,11 @@ import type {
 	MessageEndEvent,
 	ToolCallEvent,
 } from "@earendil-works/pi-coding-agent";
-
+import { registerStrReplaceEditor } from "./str-replace-editor.js";
 export interface AnchoredStandardOptions {
-	/** Tools exposed on the first model request. Default: `["bash", "read"]`. */
+	/** Tools exposed on the first model request. Default: `["bash", "str_replace_editor"]`. */
 	bootstrapTools?: string[];
-	/** First-request output cap matching upstream anchored-standard. Default: `1024`. */
+	/** Optional first-request output cap. Default: uncapped (provider budget). */
 	bootstrapMaxTokens?: number;
 	/** What promotes the session to the full catalog. Default: `"either"`. */
 	promoteOn?: "either" | "tool-call" | "assistant-message";
@@ -41,6 +41,47 @@ export interface AnchoredStandardOptions {
 /** Bootstrap persona used by the DeepSeek V4 Pro workaround. */
 export const ANCHORED_MINIMAL_PROMPT = "You are a helpful software engineer assistant.";
 
+const MINIMAL_BASH_DESCRIPTION = `Run commands in a bash shell
+* When invoking this tool, the contents of the "command" parameter does NOT need to be XML-escaped.
+* You don't have access to the internet via this tool.
+* You do have access to a mirror of common linux and python packages via apt and pip.
+* State is persistent across command calls and discussions with the user.
+* To inspect a particular line range of a file, e.g. lines 10-25, try 'sed -n 10,25p /path/to/the/file'.
+* Please avoid commands that may produce a very large amount of output.
+* Please run long lived commands in the background, e.g. 'sleep 10 &' or start a server in the background.`;
+
+const MINIMAL_BASH_PARAMETERS = {
+	type: "object",
+	properties: {
+		command: {
+			type: "string",
+			description: "The bash command to run. Relative path is preferred in the command.",
+		},
+	},
+	required: ["command"],
+};
+
+function withMinimalBashSchema(tool: Record<string, unknown>): Record<string, unknown> {
+	const fn = typeof tool.function === "object" && tool.function !== null
+		? tool.function as Record<string, unknown>
+		: undefined;
+	const name = typeof tool.name === "string" ? tool.name : fn?.name;
+	if (name !== "bash") return tool;
+	if (fn) {
+		return {
+			...tool,
+			function: {
+				...fn,
+				description: MINIMAL_BASH_DESCRIPTION,
+				parameters: MINIMAL_BASH_PARAMETERS,
+			},
+		};
+	}
+	return "input_schema" in tool
+		? { ...tool, description: MINIMAL_BASH_DESCRIPTION, input_schema: MINIMAL_BASH_PARAMETERS }
+		: { ...tool, description: MINIMAL_BASH_DESCRIPTION, parameters: MINIMAL_BASH_PARAMETERS };
+}
+
 /** Whether the active Pi model ID or name contains the targeted model marker. */
 export function isDeepSeekV4ProModel(ctx: Pick<ExtensionContext, "model">): boolean {
 	const model = ctx.model;
@@ -51,16 +92,24 @@ export function isDeepSeekV4ProModel(ctx: Pick<ExtensionContext, "model">): bool
 
 export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 	const {
-		bootstrapTools = ["bash", "read"],
-		bootstrapMaxTokens = 1024,
+		bootstrapTools = ["bash", "str_replace_editor"],
+		bootstrapMaxTokens,
 		promoteOn = "either",
 		minimalPrompt = ANCHORED_MINIMAL_PROMPT,
 	} = options;
-	if (!Number.isSafeInteger(bootstrapMaxTokens) || bootstrapMaxTokens <= 0) {
+	if (bootstrapMaxTokens !== undefined &&
+		(!Number.isSafeInteger(bootstrapMaxTokens) || bootstrapMaxTokens <= 0)) {
 		throw new TypeError("bootstrapMaxTokens must be a positive safe integer");
 	}
+	const useMinimalSchemas = bootstrapTools.includes("bash") &&
+		bootstrapTools.includes("str_replace_editor");
 
 	return (pi: ExtensionAPI): void => {
+		let ownsStrReplaceEditor = false;
+		if (bootstrapTools.includes("str_replace_editor")) {
+			registerStrReplaceEditor(pi);
+			ownsStrReplaceEditor = true;
+		}
 		const allTools = new Set<string>();
 		const normalPrompts = new Map<string, string>();
 		const bootstrapRequests = new Set<string>();
@@ -84,6 +133,8 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 		const restoreOrdinaryTools = () => {
 			if (bootstrapActive && toolsBeforeBootstrap) {
 				pi.setActiveTools(toolsBeforeBootstrap);
+			} else if (ownsStrReplaceEditor) {
+				pi.setActiveTools(pi.getActiveTools().filter((name) => name !== "str_replace_editor"));
 			}
 			bootstrapActive = false;
 			toolsBeforeBootstrap = undefined;
@@ -99,7 +150,11 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 				// of exposing an incomplete bootstrap set.
 				promote();
 			} else {
-				if (!bootstrapActive) toolsBeforeBootstrap = pi.getActiveTools();
+				if (!bootstrapActive) {
+					toolsBeforeBootstrap = pi.getActiveTools().filter(
+						(name) => !ownsStrReplaceEditor || name !== "str_replace_editor",
+					);
+				}
 				pi.setActiveTools(known);
 				bootstrapActive = true;
 			}
@@ -133,8 +188,8 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 
 		// Enforce the complete upstream bootstrap at the final provider boundary.
 		// Other extensions may append prompt text or activate tools after
-		// before_agent_start, so set the exact prompt, two tools, context, and
-		// output budget here as well.
+		// before_agent_start, so set the exact prompt, Minimal tool schemas, context,
+		// and optional output cap here as well.
 		pi.on("before_provider_request", (event, ctx) => {
 			if (typeof event.payload !== "object" || event.payload === null) return undefined;
 
@@ -174,22 +229,22 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 				};
 			}
 
-			const result: Record<string, unknown> = {
-				...payload,
-				max_tokens: bootstrapMaxTokens,
-			};
+			const result: Record<string, unknown> = { ...payload };
+			if (bootstrapMaxTokens !== undefined) result.max_tokens = bootstrapMaxTokens;
 
 			if (Array.isArray(payload.tools)) {
 				const bootstrap = new Set(bootstrapTools);
-				result.tools = (payload.tools as Array<Record<string, unknown>>).filter((tool) => {
-					const fn = tool.function;
-					const name = typeof tool.name === "string"
-						? tool.name
-						: typeof fn === "object" && fn !== null
-							? (fn as Record<string, unknown>).name
-							: undefined;
-					return typeof name === "string" && bootstrap.has(name);
-				});
+				result.tools = (payload.tools as Array<Record<string, unknown>>)
+					.filter((tool) => {
+						const fn = tool.function;
+						const name = typeof tool.name === "string"
+							? tool.name
+							: typeof fn === "object" && fn !== null
+								? (fn as Record<string, unknown>).name
+								: undefined;
+						return typeof name === "string" && bootstrap.has(name);
+					})
+					.map((tool) => useMinimalSchemas ? withMinimalBashSchema(tool) : tool);
 			}
 
 			if (minimalPrompt && messages) {

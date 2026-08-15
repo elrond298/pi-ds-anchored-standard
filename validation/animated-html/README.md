@@ -18,14 +18,14 @@ The retained runs compare:
   request. This establishes the baseline for comparison.
 - **New follow-up turn (first attempt):** the extension limits the first request,
   but a response cut off at 1,024 tokens starts a separate follow-up turn.
-- **Continue the same run (current behavior):** the extension limits the first
-  request to 1,024 tokens, then resumes interrupted work inside the same agent run
-  after restoring Pi's normal prompt, tools, and output limit.
-- **30,000-token bootstrap:** the current implementation loaded through
-  [`bootstrap-30k.ts`](bootstrap-30k.ts), which only raises
-  `bootstrapMaxTokens` from 1,024 to 30,000.
+- **1,024-token same-run continuation (previous default):** a truncated first
+  response resumes inside the same agent run after restoring Pi.
+- **30,000-token experiment:** the historical `bash` + `read` implementation
+  loaded through [`bootstrap-30k.ts`](bootstrap-30k.ts) with a 30,000-token cap.
 
 Each configuration was run at `high` and `max` thinking levels.
+These runs use the former `bash` + `read` bootstrap and explicit caps; the current
+uncapped Minimal pair is not represented.
 
 ## Visual result
 
@@ -43,12 +43,12 @@ Each configuration was run at `high` and `max` thinking levels.
 <td><img src="animations/followup-max.gif" alt="Separate follow-up, max thinking" width="360"></td>
 </tr>
 <tr>
-<th>Continue the same run<br>(current behavior)</th>
+<th>1,024-token same-run<br>(previous default)</th>
 <td><img src="animations/steer-high.gif" alt="Same-run continuation, high thinking" width="360"></td>
 <td><img src="animations/steer-max.gif" alt="Same-run continuation, max thinking" width="360"></td>
 </tr>
 <tr>
-<th>30,000-token bootstrap</th>
+<th>30,000-token experiment</th>
 <td><img src="animations/bootstrap-30k-high.gif" alt="30,000-token bootstrap, high thinking" width="360"></td>
 <td><img src="animations/bootstrap-30k-max.gif" alt="30,000-token bootstrap, max thinking" width="360"></td>
 </tr>

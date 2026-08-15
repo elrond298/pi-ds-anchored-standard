@@ -24,14 +24,16 @@ model API, the model sees:
 | Part of the request | Value |
 |---|---|
 | System prompt | `You are a helpful software engineer assistant.` |
-| Available tools | `bash` and `read` |
-| Maximum output | 1,024 tokens |
+| Available tools | Minimal `bash` and `str_replace_editor` schemas |
+| Maximum output | Provider default (no bootstrap cap) |
 | Conversation | The system prompt and current user message only |
 
 “Available tools” means the function definitions shown to the model—the actions
 it knows it can call. Pi normally shows every enabled built-in tool and every
-tool registered by installed extensions. This extension shows only `bash` and
-`read` on the first request.
+tool registered by installed extensions. This extension shows the Minimal
+`bash` + `str_replace_editor` pair on the first request. It registers a functional
+UTF-8 `str_replace_editor` for Pi and rewrites the first-request `bash` definition
+to the Minimal schema.
 
 Pi's generated instructions, workspace context, AGENTS.md/CLAUDE.md content,
 skill catalog, and prompt additions from other extensions are also left out of
@@ -54,10 +56,10 @@ returns the session to ordinary Pi behavior:
 The extension calls this transition **promotion**. By default, either a tool call
 or a completed assistant reply triggers it.
 
-If the first response consumes all 1,024 tokens, Pi would normally stop with
-`stopReason: "length"`. The extension instead promotes the session and sends one
-hidden instruction to continue inside the same agent run. The model keeps its
-interrupted work while gaining the normal Pi prompt, tools, and output limit.
+If the first response reaches the provider's output limit, Pi would normally stop
+with `stopReason: "length"`. The extension instead promotes the session and sends
+one hidden instruction to continue inside the same agent run. The model keeps its
+interrupted work while gaining the normal Pi prompt and tools.
 
 ## How it is implemented
 
@@ -70,9 +72,9 @@ The core implementation is [`src/phases.ts`](src/phases.ts):
    DeepSeek V4 Pro session with any assistant reply or tool result is already
    promoted.
 3. Before the first model call, `before_agent_start` saves Pi's normal system
-   prompt and temporarily selects only `bash` and `read`.
-4. `before_provider_request` rewrites the final request sent to the model API so
-   its prompt, messages, tool definitions, and 1,024-token limit are exact.
+   prompt and temporarily selects `bash` and `str_replace_editor`.
+4. `before_provider_request` rewrites the final request so its prompt, messages,
+   and tool definitions match Minimal while preserving the provider output budget.
 5. `tool_call` and `message_end` detect the first promotion event and restore the
    exact tool list that was active before the bootstrap request.
 6. If the first response was cut off by the token limit, `message_end` queues one
@@ -80,8 +82,8 @@ The core implementation is [`src/phases.ts`](src/phases.ts):
 
 There is no separate phase file or database entry. The saved conversation is the
 source of truth, so resumed, forked, and reloaded sessions keep the correct
-behavior. If `bash` or `read` is unavailable, the extension leaves Pi's active
-tool list unchanged instead of applying an incomplete first-request setup.
+behavior. If either bootstrap tool is unavailable, the extension leaves Pi's
+active tool list unchanged instead of applying an incomplete first-request setup.
 
 ## Install
 
@@ -102,12 +104,13 @@ The bundled entry uses these defaults:
 
 ```ts
 createAnchoredStandard({
-  bootstrapTools: ["bash", "read"],
-  bootstrapMaxTokens: 1024,
+  bootstrapTools: ["bash", "str_replace_editor"],
   promoteOn: "either",
   minimalPrompt: ANCHORED_MINIMAL_PROMPT,
 });
 ```
+`bootstrapMaxTokens` is unset by default, so the provider's normal output budget
+flows through. Set it to a positive integer only to opt into a first-request cap.
 
 `promoteOn` also accepts:
 
@@ -129,11 +132,10 @@ levels. The comparison uses four setups:
 2. **New follow-up turn (first attempt):** the extension limits the first request,
    but a truncated response starts a separate follow-up turn. This was an early
    implementation that lost the model's ongoing reasoning.
-3. **Continue the same run (current behavior):** the extension limits the first
-   request to 1,024 tokens, then continues the interrupted response inside the
-   same agent run with ordinary Pi behavior restored.
-4. **30,000-token bootstrap:** the current implementation with only
-   `bootstrapMaxTokens` raised from 1,024 to 30,000.
+3. **1,024-token same-run continuation (previous default):** a truncated first
+   response continues inside the same agent run with ordinary Pi restored.
+4. **30,000-token bootstrap experiment:** the historical `bash` + `read`
+   implementation with `bootstrapMaxTokens` set to 30,000.
 
 <table>
 <thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
@@ -149,17 +151,20 @@ levels. The comparison uses four setups:
 <td><img src="validation/animated-html/animations/followup-max.gif" alt="Separate follow-up, max thinking" width="360"></td>
 </tr>
 <tr>
-<th>Continue the same run<br>(current behavior)</th>
+<th>1,024-token same-run<br>(previous default)</th>
 <td><img src="validation/animated-html/animations/steer-high.gif" alt="Same-run continuation, high thinking" width="360"></td>
 <td><img src="validation/animated-html/animations/steer-max.gif" alt="Same-run continuation, max thinking" width="360"></td>
 </tr>
 <tr>
-<th>30,000-token bootstrap</th>
+<th>30,000-token experiment</th>
 <td><img src="validation/animated-html/animations/bootstrap-30k-high.gif" alt="30,000-token bootstrap, high thinking" width="360"></td>
 <td><img src="validation/animated-html/animations/bootstrap-30k-max.gif" alt="30,000-token bootstrap, max thinking" width="360"></td>
 </tr>
 </tbody>
 </table>
+These archived runs use the former `bash` + `read` bootstrap and compare its
+1,024-token default with a 30,000-token cap. The current uncapped Minimal pair is
+not represented.
 
 Raising the bootstrap limit did not improve performance consistently. At `high`,
 the 30,000-token result was slower and visually worse. At `max`, it was visually

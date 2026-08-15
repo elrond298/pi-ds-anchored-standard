@@ -11,8 +11,8 @@ it implements first-request conditioning through Pi's dynamic tool loading:
   contains `deepseek-v4-pro` (case-insensitive); all other models keep ordinary
   Pi behavior;
 - a target model's blank-session first provider request uses the exact Minimal
-  persona, only `bash` + `read`, `max_tokens: 1024`, and no generated workspace
-  or skill-catalog sections;
+  persona, the Minimal `bash` + `str_replace_editor` schemas, the provider's
+  uncapped output budget, and no generated workspace or skill-catalog sections;
 - the session restores the exact pre-bootstrap active tool list after its first
   durable promotion signal — first `tool_call` or first assistant `message_end`,
   whichever comes first (`promoteOn: "either"`);
