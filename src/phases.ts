@@ -130,7 +130,8 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 						(e.message.role === "assistant" || e.message.role === "toolResult"),
 				);
 
-		const restoreOrdinaryTools = () => {
+		const restoreOrdinaryTools = (): boolean => {
+			const wasBootstrapActive = bootstrapActive;
 			if (bootstrapActive && toolsBeforeBootstrap) {
 				pi.setActiveTools(toolsBeforeBootstrap);
 			} else if (ownsStrReplaceEditor) {
@@ -138,9 +139,15 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 			}
 			bootstrapActive = false;
 			toolsBeforeBootstrap = undefined;
+			return wasBootstrapActive;
 		};
 
 		const promote = restoreOrdinaryTools;
+		const notifyPromotion = (ctx: ExtensionContext) => {
+			if (promote()) {
+				ctx.ui.notify("Anchored Standard bootstrap completed; ordinary Pi restored.", "info");
+			}
+		};
 
 		const applyBootstrap = () => {
 			remember();
@@ -279,7 +286,7 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 				// Any tool call promotes — even a blocked or failed execution, which
 				// is already durable in the transcript (matches anchored).
 				bootstrapRequests.delete(ctx.sessionManager.getSessionId());
-				promote();
+				notifyPromotion(ctx);
 			});
 		}
 
@@ -291,7 +298,7 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 					return;
 				}
 				const wasBootstrap = bootstrapRequests.delete(ctx.sessionManager.getSessionId());
-				promote();
+				notifyPromotion(ctx);
 				if (wasBootstrap && (event.message as { stopReason?: string }).stopReason === "length") {
 					pi.sendMessage(
 						{

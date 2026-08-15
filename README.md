@@ -54,7 +54,8 @@ returns the session to ordinary Pi behavior:
 - the model's usual maximum output limit returns.
 
 The extension calls this transition **promotion**. By default, either a tool call
-or a completed assistant reply triggers it.
+or a completed assistant reply triggers it. Pi shows one informational notification
+when the live bootstrap completes.
 
 If the first response reaches the provider's output limit, Pi would normally stop
 with `stopReason: "length"`. The extension instead promotes the session and sends

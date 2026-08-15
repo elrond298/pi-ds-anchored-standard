@@ -44,7 +44,10 @@ function makePi(initialTools = TOOLS) {
 }
 
 function makeCtx(entries: Entry[] = [], modelId: string | undefined = "deepseek-v4-pro") {
+	const notifications: Array<{ message: string; level: string }> = [];
 	return {
+		notifications,
+		ui: { notify: (message: string, level: string) => notifications.push({ message, level }) },
 		model: modelId ? { id: modelId } : undefined,
 		sessionManager: { getEntries: () => entries, getSessionId: () => "test-session" },
 	};
@@ -200,15 +203,25 @@ describe("bootstrap phase", () => {
 describe("promotion", () => {
 	it("restores the pre-bootstrap tool list on a tool call", async () => {
 		const { pi } = setup(undefined, ["read", "write"]);
-		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
-		await pi.emit("tool_call", { type: "tool_call", toolName: "bash" }, makeCtx());
+		const ctx = makeCtx();
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, ctx);
+		await pi.emit("tool_call", { type: "tool_call", toolName: "bash" }, ctx);
 		expect(pi.active.sort()).toEqual(["read", "write"]);
+		expect(ctx.notifications).toEqual([{
+			message: "Anchored Standard bootstrap completed; ordinary Pi restored.",
+			level: "info",
+		}]);
+		await pi.emit("tool_call", { type: "tool_call", toolName: "read" }, ctx);
+		expect(ctx.notifications).toHaveLength(1);
 	});
 
 	it("promotes on a text-only assistant reply", async () => {
 		const { pi } = setup();
-		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
+		const ctx = makeCtx();
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, ctx);
+		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, ctx);
 		expect(pi.active.sort()).toEqual([...TOOLS].sort());
+		expect(ctx.notifications).toHaveLength(1);
 	});
 
 	it("resumes a session with assistant content already promoted", async () => {

@@ -15,7 +15,8 @@ it implements first-request conditioning through Pi's dynamic tool loading:
   uncapped output budget, and no generated workspace or skill-catalog sections;
 - the session restores the exact pre-bootstrap active tool list after its first
   durable promotion signal — first `tool_call` or first assistant `message_end`,
-  whichever comes first (`promoteOn: "either"`);
+  whichever comes first (`promoteOn: "either"`), and shows one informational
+  notification when that live transition completes;
 - a bootstrap response ending at `stopReason: "length"` queues exactly one
   hidden steering continuation in the same agent run after promotion;
 - the phase is derived from the durable session transcript (any
