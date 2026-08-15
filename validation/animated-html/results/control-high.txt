@@ -1,7 +1,0 @@
-PASS (20) HTML file
-PASS (20) inline SVG
-PASS (20) pelican semantics
-PASS (20) bicycle semantics
-PASS (20) animation
-artifact: pelican-bicycle.html (7496 bytes)
-TOTAL: 100/100

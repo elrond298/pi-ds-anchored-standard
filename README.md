@@ -88,38 +88,31 @@ and context during the bootstrap request.
 
 ## Validation
 
-We validated the truncation and continuation behavior with DeepSeek V4 Pro at
-both `high` and `max` thinking levels. The task asked for a self-contained HTML
-file containing an animated SVG of a pelican riding a bicycle, without allowing
-the tested agent to validate its own output.
+We ran the same animated-HTML task at `high` and `max` thinking levels with the
+full-catalog control, the initial fresh `followUp`, and the final same-run
+`steer` continuation.
 
 ![Animated SVG produced by the final anchored max validation](validation/animated-html/demo.gif)
 
-| thinking | full-catalog control | final anchored + steer |
-|---|---:|---:|
-| high | 100/100 | 100/100 |
-| max | 100/100 | 100/100 |
+This is the actual browser-rendered output from the checked-in final anchored
+`max` run. The tested agent generated the HTML without previewing or validating
+it; the animation was captured afterward.
 
-The full campaign also preserves the two failed intermediate behaviors:
+Visual inspection found that the fresh `followUp` restarted and simplified the
+work: its `max` SVG collapsed to a `0×0` render. Both final `steer` outputs
+rendered correctly, showing that same-run continuation preserved the interrupted
+work while restoring Pi's full runtime.
 
-- without automatic continuation, both anchored runs stopped at the 1024-token
-  boundary and produced no file;
-- a queued `followUp` produced less reasoning and one structurally valid file
-  whose SVG rendered at `0×0`;
-- changing delivery to same-run `steer` restored substantial reasoning and both
-  browser-validated outputs.
+The retained evidence under
+[`validation/animated-html/`](validation/animated-html/) contains:
 
-All evidence is checked into
-[`validation/animated-html/`](validation/animated-html/):
-
-- complete sanitized Pi conversations for all eight runs, including reasoning,
-  tool calls, tool results, and the hidden continuation;
-- generated HTML files and browser screenshots;
-- exact checker output and machine-readable metrics;
+- complete sanitized Pi conversations for the six runs that produced artifacts;
+- each generated HTML file and its browser screenshot;
+- the animation shown above;
 - the sanitizer and SHA-256 manifest.
 
-See the [validation report](validation/animated-html/README.md) for timings,
-per-response reasoning counts, methodology, and sanitization details.
+See the [validation report](validation/animated-html/README.md) for the visual
+comparison and sanitization details.
 
 ## Trajectory signal
 
