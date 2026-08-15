@@ -3,10 +3,10 @@
  * the full catalog after the first tool call or assistant message.
  *
  * Port of xiaobright/dsh-anchored-standard to pi's dynamic tool loading
- * (`pi.setActiveTools`): a blank session sees only `bash` + `read` + `write` on its
- * first model request; the session promotes to the full registered catalog
- * after its first durable promotion signal. The phase is derived from the
- * session transcript, so resume, fork, and reload preserve it.
+ * (`pi.setActiveTools`): request #1 uses the exact Minimal persona, only
+ * `bash` + `read`, `max_tokens: 1024`, and no generated workspace/skill
+ * context. After its first durable promotion signal, the full pi prompt,
+ * provider budget, and tool catalog return. Resume/fork/reload preserve phase.
  *
  * The bundled trajectory detector (`/trajectory`) verifies the bootstrap is
  * effective using the "let me" word-frequency fingerprint from

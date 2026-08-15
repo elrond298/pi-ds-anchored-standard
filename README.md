@@ -4,11 +4,12 @@ Bootstrap the first model request with a Minimal-aligned tool catalog, then
 expose the full tool catalog — a pi extension port of
 [xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard).
 
-A blank session sees only **`bash` + `read` + `write`** on its first model request. After
-the session's first durable promotion signal — the first tool call **or** the
-first assistant reply, whichever comes first — the full registered tool
-catalog is exposed. The phase is derived from the session transcript, so
-resume, fork, and `/reload` preserve it.
+A blank session's first provider request matches upstream Minimal: the exact
+persona system prompt, only **`bash` + `read`**, `max_tokens: 1024`, and no
+workspace/skill catalog text. After the first tool call or assistant reply, the
+full catalog, normal pi prompt/context, and provider output budget return. The
+phase comes from the durable transcript, so resume, fork, and `/reload` preserve
+it.
 
 The original project's rationale: DeepSeek V4 Pro conditions strongly on the
 API-visible tool catalog (Project2: Minimal 99/96 vs Standard 91/92). pi's
@@ -30,11 +31,12 @@ pi -e ./src/index.ts
 
 ## Behavior
 
-- **Request #1** (blank session): active tools are `bash` + `read` + `write`; pi's
-  system prompt shrinks accordingly (its tool list is generated from active
-  tools). `write` is the Pi adaptation that keeps one-shot file-generation tasks
-  on the filesystem path; pass `bootstrapTools: ["bash", "read"]` for exact
-  original two-tool behavior.
+- **Request #1 prompt/context**: system prompt is exactly
+  `You are a helpful software engineer assistant.`; replacing pi's generated
+  prompt removes AGENTS.md/CLAUDE.md and skill-catalog sections.
+- **Request #1 tools**: active tools are exactly `bash` + `read`.
+- **Request #1 output**: provider payload is capped to `max_tokens: 1024`, the
+  upstream reproduction's trajectory-critical budget.
 - **Promotion**: the first `tool_call` or the first assistant `message_end`
   switches to the full registered catalog before the next model request.
   A blocked or failed tool execution still promotes — it is already durable
@@ -69,11 +71,10 @@ A `let me`-heavy session means the bootstrap is not anchoring (extension not
 loaded, composition drifted, or the model does not condition on the catalog).
 
 ## Options
-`minimalPrompt: null` keeps pi's normal system prompt — its tool sections
-already shrink to the active catalog, and the catalog is the mechanism the
-original eval credits. Set `minimalPrompt: ANCHORED_MINIMAL_PROMPT`
-(`"You are a helpful software engineer assistant."`) to also reproduce the
-original's minimal complete system prompt on the bootstrap turn.
+Defaults reproduce upstream: `bootstrapTools: ["bash", "read"]`,
+`bootstrapMaxTokens: 1024`, `promoteOn: "either"`, and
+`minimalPrompt: ANCHORED_MINIMAL_PROMPT`. Set `minimalPrompt: null` only when
+you deliberately want pi's normal bootstrap prompt/context instead.
 
 ## Verify
 
@@ -83,8 +84,9 @@ npm test
 npm run typecheck
 ```
 
-Manually: start a blank session — the model can only call `bash`/`read`/`write`;
-after its first reply or tool call, every tool is available.
+Manually capture request #1: it must contain only `bash`/`read`, the one-line
+Minimal system prompt, the user message, and `max_tokens: 1024`. After its first
+reply or tool call, request #2 uses the full catalog and normal provider budget.
 
 ## Notes
 

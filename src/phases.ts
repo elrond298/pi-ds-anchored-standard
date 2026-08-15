@@ -2,7 +2,7 @@
  * Anchored Standard — core logic, port of xiaobright/dsh-anchored-standard.
  *
  * Bootstraps the first model request with a Minimal-aligned tool catalog
- * (shell + read + write), then exposes the full registered tool catalog
+ * (platform shell + read), then exposes the full registered tool catalog
  * after the session's first durable promotion signal (first tool call or
  * first assistant message). The phase is derived from the durable session
  * transcript, so resume, fork, and reload preserve it — no extra state.
@@ -27,16 +27,16 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 export interface AnchoredStandardOptions {
-	/** Tools exposed on the first model request. Default: `["bash", "read", "write"]`. */
+	/** Tools exposed on the first model request. Default: `["bash", "read"]`. */
 	bootstrapTools?: string[];
+	/** First-request output cap matching upstream anchored-standard. Default: `1024`. */
+	bootstrapMaxTokens?: number;
 	/** What promotes the session to the full catalog. Default: `"either"`. */
 	promoteOn?: "either" | "tool-call" | "assistant-message";
 	/**
 	 * System prompt used while the session is in the bootstrap phase.
-	 * `null` (default) keeps pi's normal system prompt, whose tool sections
-	 * already shrink to the active catalog. Set to the anchored-standard
-	 * persona — `"You are a helpful software engineer assistant."` — to also
-	 * reproduce its minimal complete system prompt on request #1.
+	 * Defaults to the byte-identical Minimal persona. Set `null` to keep pi's
+	 * normal system prompt instead.
 	 */
 	minimalPrompt?: string | null;
 }
@@ -46,13 +46,18 @@ export const ANCHORED_MINIMAL_PROMPT = "You are a helpful software engineer assi
 
 export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 	const {
-		bootstrapTools = ["bash", "read", "write"],
+		bootstrapTools = ["bash", "read"],
+		bootstrapMaxTokens = 1024,
 		promoteOn = "either",
-		minimalPrompt = null,
+		minimalPrompt = ANCHORED_MINIMAL_PROMPT,
 	} = options;
+	if (!Number.isSafeInteger(bootstrapMaxTokens) || bootstrapMaxTokens <= 0) {
+		throw new TypeError("bootstrapMaxTokens must be a positive safe integer");
+	}
 
 	return (pi: ExtensionAPI): void => {
 		const allTools = new Set<string>();
+		const normalPrompts = new Map<string, string>();
 		const remember = () => {
 			for (const t of pi.getAllTools()) allTools.add(t.name);
 		};
@@ -92,13 +97,74 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 
 		// Re-assert the phase on every user turn; this also covers switching
 		// between sessions, which does not always fire session_start.
-		pi.on("before_agent_start", (_event, ctx) => {
+		pi.on("before_agent_start", (event, ctx) => {
 			if (hasAssistantContent(ctx)) {
 				promote();
 				return undefined; // normal pi system prompt
 			}
+			normalPrompts.set(ctx.sessionManager.getSessionId(), event.systemPrompt);
 			applyBootstrap();
 			return minimalPrompt ? { systemPrompt: minimalPrompt } : undefined;
+		});
+
+		// Enforce the complete upstream bootstrap at the final provider boundary.
+		// Other extensions may append prompt text or activate tools after
+		// before_agent_start, so set the exact prompt, two tools, context, and
+		// output budget here as well.
+		pi.on("before_provider_request", (event, ctx) => {
+			if (typeof event.payload !== "object" || event.payload === null) return undefined;
+
+			const payload = event.payload as Record<string, unknown>;
+			const messages = Array.isArray(payload.messages)
+				? payload.messages as Array<Record<string, unknown>>
+				: undefined;
+			const sessionId = ctx.sessionManager.getSessionId();
+
+			if (hasAssistantContent(ctx)) {
+				const normalPrompt = normalPrompts.get(sessionId);
+				if (!normalPrompt || !messages) return undefined;
+				const hasSystem = messages.some((message) => message.role === "system");
+				return {
+					...payload,
+					messages: hasSystem
+						? messages.map((message) => message.role === "system"
+							? { ...message, content: normalPrompt }
+							: message)
+						: [{ role: "system", content: normalPrompt }, ...messages],
+				};
+			}
+
+			const result: Record<string, unknown> = {
+				...payload,
+				max_tokens: bootstrapMaxTokens,
+			};
+
+			if (Array.isArray(payload.tools)) {
+				const bootstrap = new Set(bootstrapTools);
+				result.tools = (payload.tools as Array<Record<string, unknown>>).filter((tool) => {
+					const fn = tool.function;
+					const name = typeof tool.name === "string"
+						? tool.name
+						: typeof fn === "object" && fn !== null
+							? (fn as Record<string, unknown>).name
+							: undefined;
+					return typeof name === "string" && bootstrap.has(name);
+				});
+			}
+
+			if (minimalPrompt && messages) {
+				const system = messages.find((message) => message.role === "system");
+				const user = messages.find((message) => message.role === "user");
+				if (!normalPrompts.has(sessionId) && typeof system?.content === "string") {
+					normalPrompts.set(sessionId, system.content);
+				}
+				result.messages = [
+					system ? { ...system, content: minimalPrompt } : { role: "system", content: minimalPrompt },
+					...(user ? [user] : []),
+				];
+			}
+
+			return result;
 		});
 
 		if (promoteOn !== "assistant-message") {

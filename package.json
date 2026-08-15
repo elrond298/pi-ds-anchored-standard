@@ -2,7 +2,7 @@
 	"name": "pi-anchored-standard",
 	"version": "0.1.0",
 	"type": "module",
-	"description": "Pi extension: bootstrap with a Minimal tool catalog (bash + read + write), promote to the full catalog after the first tool call or assistant message. Port of dsh-anchored-standard.",
+	"description": "Pi extension: Minimal-exact first request (bash + read, 1024-token cap, no workspace/skill context), then promote to the full catalog.",
 	"author": "ck",
 	"license": "MIT",
 	"files": [
