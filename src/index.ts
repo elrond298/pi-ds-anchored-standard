@@ -1,5 +1,5 @@
 /**
- * pi-anchored-standard — bootstrap with a Minimal tool catalog, then expose
+ * pi-ds-anchored-standard — bootstrap with a Minimal tool catalog, then expose
  * the full catalog after the first tool call or assistant message.
  *
  * Port of xiaobright/dsh-anchored-standard to pi's dynamic tool loading

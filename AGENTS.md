@@ -2,7 +2,7 @@
 
 ## Project overview
 
-`pi-anchored-standard` is a Pi extension that ports
+`pi-ds-anchored-standard` is a Pi extension that ports
 [xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard)
 to pi's dynamic tool loading:
 

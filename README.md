@@ -1,4 +1,4 @@
-# pi-anchored-standard
+# pi-ds-anchored-standard
 
 Bootstrap the first model request with a Minimal-aligned tool catalog, then
 expose the full tool catalog — a pi extension port of
@@ -20,7 +20,7 @@ that support it.
 ## Install
 
 ```bash
-pi install /path/to/pi-anchored-standard
+pi install /path/to/pi-ds-anchored-standard
 ```
 
 Then restart Pi or run `/reload`. For a single run without installing:
@@ -91,6 +91,12 @@ npm run typecheck
 Manually capture request #1: it must contain only `bash`/`read`, the one-line
 Minimal system prompt, the user message, and `max_tokens: 1024`. After its first
 reply or tool call, request #2 uses the full catalog and normal provider budget.
+
+## Validation artifacts
+
+The complete sanitized animated-HTML validation conversations, generated files,
+screenshots, checker output, and aggregate metrics are preserved under
+[`validation/animated-html/`](validation/animated-html/).
 
 ## Notes
 
