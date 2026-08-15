@@ -3,7 +3,7 @@
  * the full catalog after the first tool call or assistant message.
  *
  * Port of xiaobright/dsh-anchored-standard to pi's dynamic tool loading
- * (`pi.setActiveTools`): a blank session sees only `bash` + `read` on its
+ * (`pi.setActiveTools`): a blank session sees only `bash` + `read` + `write` on its
  * first model request; the session promotes to the full registered catalog
  * after its first durable promotion signal. The phase is derived from the
  * session transcript, so resume, fork, and reload preserve it.

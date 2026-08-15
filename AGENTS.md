@@ -6,8 +6,9 @@
 [xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard)
 to pi's dynamic tool loading:
 
-- a blank session exposes only `bash` + `read` on its first model request
-  (`pi.setActiveTools`);
+- a blank session exposes only `bash` + `read` + `write` on its first model
+  request (`pi.setActiveTools`); `write` is the Pi adaptation for one-shot file
+  generation, while callers can explicitly configure the original two-tool set;
 - the session promotes to the full registered tool catalog after its first
   durable promotion signal — first `tool_call` or first assistant
   `message_end`, whichever comes first (`promoteOn: "either"`);

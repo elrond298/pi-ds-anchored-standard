@@ -2,7 +2,7 @@
  * Anchored Standard — core logic, port of xiaobright/dsh-anchored-standard.
  *
  * Bootstraps the first model request with a Minimal-aligned tool catalog
- * (platform shell + read), then exposes the full registered tool catalog
+ * (shell + read + write), then exposes the full registered tool catalog
  * after the session's first durable promotion signal (first tool call or
  * first assistant message). The phase is derived from the durable session
  * transcript, so resume, fork, and reload preserve it — no extra state.
@@ -27,7 +27,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 export interface AnchoredStandardOptions {
-	/** Tools exposed on the first model request. Default: `["bash", "read"]`. */
+	/** Tools exposed on the first model request. Default: `["bash", "read", "write"]`. */
 	bootstrapTools?: string[];
 	/** What promotes the session to the full catalog. Default: `"either"`. */
 	promoteOn?: "either" | "tool-call" | "assistant-message";
@@ -46,7 +46,7 @@ export const ANCHORED_MINIMAL_PROMPT = "You are a helpful software engineer assi
 
 export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 	const {
-		bootstrapTools = ["bash", "read"],
+		bootstrapTools = ["bash", "read", "write"],
 		promoteOn = "either",
 		minimalPrompt = null,
 	} = options;

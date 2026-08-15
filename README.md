@@ -4,7 +4,7 @@ Bootstrap the first model request with a Minimal-aligned tool catalog, then
 expose the full tool catalog — a pi extension port of
 [xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard).
 
-A blank session sees only **`bash` + `read`** on its first model request. After
+A blank session sees only **`bash` + `read` + `write`** on its first model request. After
 the session's first durable promotion signal — the first tool call **or** the
 first assistant reply, whichever comes first — the full registered tool
 catalog is exposed. The phase is derived from the session transcript, so
@@ -30,9 +30,11 @@ pi -e ./src/index.ts
 
 ## Behavior
 
-- **Request #1** (blank session): active tools are `bash` + `read` only; pi's
+- **Request #1** (blank session): active tools are `bash` + `read` + `write`; pi's
   system prompt shrinks accordingly (its tool list is generated from active
-  tools).
+  tools). `write` is the Pi adaptation that keeps one-shot file-generation tasks
+  on the filesystem path; pass `bootstrapTools: ["bash", "read"]` for exact
+  original two-tool behavior.
 - **Promotion**: the first `tool_call` or the first assistant `message_end`
   switches to the full registered catalog before the next model request.
   A blocked or failed tool execution still promotes — it is already durable
@@ -40,8 +42,6 @@ pi -e ./src/index.ts
 - **Durability**: any assistant/toolResult entry in the session transcript
   means promoted, so resume/fork/reload never re-bootstrap a session that
   already produced content.
-- **Degradation**: a missing bootstrap tool (composition drift) degrades to
-  the full catalog instead of leaving the model with no tools.
 - **Degradation**: a missing bootstrap tool (composition drift) degrades to
   the full catalog instead of leaving the model with no tools.
 
@@ -83,7 +83,7 @@ npm test
 npm run typecheck
 ```
 
-Manually: start a blank session — the model can only call `bash`/`read`;
+Manually: start a blank session — the model can only call `bash`/`read`/`write`;
 after its first reply or tool call, every tool is available.
 
 ## Notes

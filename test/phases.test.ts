@@ -10,7 +10,7 @@ interface Entry {
 
 function makePi() {
 	// Post-startup steady state: the extension already applied bootstrap.
-	let active = ["bash", "read"];
+	let active = ["bash", "read", "write"];
 	const handlers = new Map<string, Array<(event: any, ctx: any) => any>>();
 	const pi = {
 		get active() {
@@ -46,16 +46,16 @@ function setup(options?: Parameters<typeof createAnchoredStandard>[0]) {
 }
 
 describe("bootstrap phase", () => {
-	it("starts a new session with only shell + read active", async () => {
+	it("starts a new session with shell + read + write active", async () => {
 		const { pi } = setup();
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "read", "write"]);
 	});
 
 	it("keeps the bootstrap catalog on the first user turn", async () => {
 		const { pi } = setup();
 		const result = await pi.emit("before_agent_start", { type: "before_agent_start" }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "read", "write"]);
 		expect(result).toBeUndefined(); // no prompt replacement by default
 	});
 
@@ -69,7 +69,7 @@ describe("bootstrap phase", () => {
 		const { pi } = setup();
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("message_end", { type: "message_end", message: { role: "user" } }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "read", "write"]);
 	});
 });
 
@@ -99,7 +99,7 @@ describe("promotion", () => {
 	it("promoteOn: tool-call ignores assistant messages", async () => {
 		const { pi } = setup({ promoteOn: "tool-call" });
 		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "read", "write"]);
 		await pi.emit("tool_call", { type: "tool_call", toolName: "read" }, makeCtx());
 		expect(pi.active.sort()).toEqual([...TOOLS].sort());
 	});
@@ -107,7 +107,7 @@ describe("promotion", () => {
 	it("promoteOn: assistant-message ignores tool calls", async () => {
 		const { pi } = setup({ promoteOn: "assistant-message" });
 		await pi.emit("tool_call", { type: "tool_call", toolName: "bash" }, makeCtx());
-		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(pi.active.sort()).toEqual(["bash", "read", "write"]);
 		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
 		expect(pi.active.sort()).toEqual([...TOOLS].sort());
 	});
