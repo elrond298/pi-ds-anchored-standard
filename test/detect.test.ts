@@ -60,7 +60,7 @@ describe("createTrajectoryDetector", () => {
 			on: (evt: string, h: (event: any, ctx: any) => any) =>
 				handlers.set(evt, [...(handlers.get(evt) ?? []), h]),
 		};
-		const ctx = { ui: { notify } };
+		const ctx = { model: { id: "deepseek-v4-pro" }, ui: { notify } };
 		createTrajectoryDetector().activate(pi as any);
 
 		const msg = () =>
@@ -80,7 +80,7 @@ describe("createTrajectoryDetector", () => {
 				handlers.set(evt, [...(handlers.get(evt) ?? []), h]),
 		};
 		createTrajectoryDetector().activate(pi as any);
-		const ctx = { ui: { notify } };
+		const ctx = { model: { id: "deepseek-v4-pro" }, ui: { notify } };
 
 		const anchored = () =>
 			assistantMessage([
@@ -95,5 +95,26 @@ describe("createTrajectoryDetector", () => {
 		}
 		expect(notify).not.toHaveBeenCalled();
 		expect(handlers.get("message_end")![0]).toBeDefined();
+	});
+
+	it("ignores assistant messages from other models", async () => {
+		const notify = vi.fn();
+		const handlers = new Map<string, Array<(event: any, ctx: any) => any>>();
+		const pi = {
+			on: (evt: string, h: (event: any, ctx: any) => any) =>
+				handlers.set(evt, [...(handlers.get(evt) ?? []), h]),
+		};
+		const detector = createTrajectoryDetector();
+		detector.activate(pi as any);
+		await handlers.get("message_end")![0](
+			{
+				type: "message_end",
+				message: assistantMessage([{ type: "text", text: "let me, let me" }]),
+			},
+			{ model: { id: "gpt-5.4" }, ui: { notify } },
+		);
+
+		expect(detector.tracker.stats().assistantMessages).toBe(0);
+		expect(notify).not.toHaveBeenCalled();
 	});
 });

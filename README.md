@@ -2,19 +2,24 @@
 
 [简体中文](README.zh-CN.md)
 
-A Pi extension that gives the model a deliberately small environment for its
-first request, then returns Pi to normal for the rest of the session.
+This Pi extension is a targeted workaround for **DeepSeek V4 Pro 0813**. Its
+purpose is to improve that model's performance by giving it a deliberately small
+environment for the first request, then returning Pi to normal for the rest of
+the session.
 
-The design is inspired by
-[`xiaobright/dsh-anchored-standard`](https://github.com/xiaobright/dsh-anchored-standard).
-This package applies the same first-request conditioning idea through Pi's
-extension API.
+The method is inspired by
+[`xiaobright/dsh-anchored-standard`](https://github.com/xiaobright/dsh-anchored-standard)
+and implemented here through Pi's extension API.
+
+> **Model scope:** the workaround runs only when the active model is DeepSeek V4
+> Pro. Every other model keeps ordinary Pi behavior from the first request.
 
 ## What changes
 
 ### First request only
 
-When a blank session sends its first request to the model API, the model sees:
+When a blank session uses DeepSeek V4 Pro and sends its first request to the
+model API, the model sees:
 
 | Part of the request | Value |
 |---|---|
@@ -31,6 +36,11 @@ tool registered by installed extensions. This extension shows only `bash` and
 Pi's generated instructions, workspace context, AGENTS.md/CLAUDE.md content,
 skill catalog, and prompt additions from other extensions are also left out of
 that request.
+
+The model check accepts the Pi model IDs `deepseek-v4-pro`,
+`deepseek-v4-pro-0813`, `deepseek/deepseek-v4-pro`, and
+`deepseek/deepseek-v4-pro-0813`. If the active model does not match one of these
+IDs, the extension does not alter the prompt, context, tools, or output limit.
 
 ### After the first tool call or reply
 
@@ -54,21 +64,24 @@ interrupted work while gaining the normal Pi prompt, tools, and output limit.
 
 The core implementation is [`src/phases.ts`](src/phases.ts):
 
-1. `session_start` and `before_agent_start` inspect the saved conversation. A
-   session with any assistant reply or tool result is already promoted.
-2. Before the first model call, `before_agent_start` saves Pi's normal system
+1. Each event checks the active model ID. Non-target models immediately keep all
+   enabled Pi tools and their unchanged request.
+2. `session_start` and `before_agent_start` inspect the saved conversation. A
+   DeepSeek V4 Pro session with any assistant reply or tool result is already
+   promoted.
+3. Before the first model call, `before_agent_start` saves Pi's normal system
    prompt and temporarily selects only `bash` and `read`.
-3. `before_provider_request` rewrites the final request sent to the model API so
+4. `before_provider_request` rewrites the final request sent to the model API so
    its prompt, messages, tool definitions, and 1,024-token limit are exact.
-4. `tool_call` and `message_end` detect the first promotion event and restore all
-   tools registered with Pi.
-5. If the first response was cut off by the token limit, `message_end` queues one
+5. `tool_call` and `message_end` detect the first promotion event and restore the
+   exact tool list that was active before the bootstrap request.
+6. If the first response was cut off by the token limit, `message_end` queues one
    same-run continuation using Pi's `deliverAs: "steer"` mode.
 
 There is no separate phase file or database entry. The saved conversation is the
 source of truth, so resumed, forked, and reloaded sessions keep the correct
-behavior. If `bash` or `read` is unavailable, the extension safely leaves all Pi
-tools enabled instead of giving the model an incomplete first request.
+behavior. If `bash` or `read` is unavailable, the extension leaves Pi's active
+tool list unchanged instead of applying an incomplete first-request setup.
 
 ## Install
 
@@ -101,7 +114,8 @@ createAnchoredStandard({
 - `"assistant-message"`: restore it only after the first completed reply.
 
 Set `minimalPrompt: null` only if you want Pi's normal prompt and context to stay
-in the first request.
+in the first request. Configuration changes bootstrap behavior for DeepSeek V4
+Pro only; they never enable the workaround for another model.
 
 ## Visual validation
 
@@ -142,7 +156,11 @@ levels. The comparison uses three clearly defined setups:
 These are browser recordings of the actual checked-in HTML files. The tested
 agents did not preview or validate their own output. The separate follow-up at
 `max` produced a page whose SVG had a `0×0` layout, so its recording is blank.
-Both current same-run continuations rendered correctly.
+Both current same-run continuations rendered correctly. Compared with the
+ordinary Pi outputs, they are visibly more detailed and coherent—the `max`
+result adds a clearer rider pose, helmet, fish, bicycle linkage, and scenery.
+This is a real improvement in this visual test, not a claim of universal gains
+across every task.
 
 The [validation directory](validation/animated-html/) contains all six generated
 HTML files, screenshots, animations, complete sanitized Pi conversations, the
@@ -154,6 +172,7 @@ sanitizer, and a SHA-256 manifest.
 `we`, and `let's` counts, visible reply count, reasoning-block count, and median
 reasoning length. It is inspired by
 [`xiaobright/modeltest`'s DeepSeek V4 trajectory analysis](https://github.com/xiaobright/modeltest/blob/main/docs/v4.1/DEEPSEEK_V4_TRAJECTORY_ANALYSIS_20260814.md).
+The command is inactive when the current model is not DeepSeek V4 Pro.
 
 Treat this output as a clue, not proof that the extension worked or failed. The
 fingerprint came from structured engineering tasks and did not transfer reliably
@@ -167,7 +186,7 @@ npm test
 npm run typecheck
 ```
 
-The tests cover first-request shaping, session detection, tool restoration,
+The tests cover model gating, first-request shaping, session detection, tool and
 prompt restoration, missing bootstrap tools, truncated-response continuation,
 and trajectory statistics.
 

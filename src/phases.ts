@@ -1,17 +1,14 @@
 /**
- * Anchored Standard — core logic, port of xiaobright/dsh-anchored-standard.
+ * Anchored Standard — core logic inspired by xiaobright/dsh-anchored-standard.
  *
- * Bootstraps the first model request with a Minimal-aligned tool catalog
- * (platform shell + read), then exposes the full registered tool catalog
- * after the session's first durable promotion signal (first tool call or
- * first assistant message). The phase is derived from the durable session
- * transcript, so resume, fork, and reload preserve it — no extra state.
+ * Improves DeepSeek V4 Pro 0813 behavior by bootstrapping only recognized
+ * DeepSeek V4 Pro model IDs with a Minimal-aligned tool catalog (platform shell
+ * + read), then restoring the exact pre-bootstrap tool list after the first tool
+ * call or assistant message. Other models are never bootstrapped. Session state
+ * is derived from the durable transcript, so resume, fork, and reload preserve it.
  *
- * Rationale (from the original project): DeepSeek V4 Pro conditions strongly
- * on the API-visible tool catalog; a small catalog on request #1 scores
- * better on Project2, and the full catalog is restored once the trajectory
- * is chosen. The same mechanism — pi's dynamic tool loading
- * (`pi.setActiveTools`) — applies here.
+ * The method is inspired by xiaobright/dsh-anchored-standard and implemented
+ * here with Pi's dynamic tool loading (`pi.setActiveTools`).
  *
  * Note on pi's extension contract: the factory receives only `pi`; the
  * per-event `ctx` (with `sessionManager`, `ui`, ...) arrives on each handler
@@ -41,8 +38,20 @@ export interface AnchoredStandardOptions {
 	minimalPrompt?: string | null;
 }
 
-/** Bootstrap persona used by the original dsh-anchored-standard preset. */
+/** Bootstrap persona used by the DeepSeek V4 Pro workaround. */
 export const ANCHORED_MINIMAL_PROMPT = "You are a helpful software engineer assistant.";
+
+const DEEPSEEK_V4_PRO_MODEL_IDS = new Set([
+	"deepseek-v4-pro",
+	"deepseek-v4-pro-0813",
+	"deepseek/deepseek-v4-pro",
+	"deepseek/deepseek-v4-pro-0813",
+]);
+
+/** Whether the active Pi model is a DeepSeek V4 Pro variant targeted by this workaround. */
+export function isDeepSeekV4ProModel(ctx: Pick<ExtensionContext, "model">): boolean {
+	return DEEPSEEK_V4_PRO_MODEL_IDS.has(ctx.model?.id.toLowerCase() ?? "");
+}
 
 export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 	const {
@@ -59,6 +68,8 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 		const allTools = new Set<string>();
 		const normalPrompts = new Map<string, string>();
 		const bootstrapRequests = new Set<string>();
+		let bootstrapActive = false;
+		let toolsBeforeBootstrap: string[] | undefined;
 		const remember = () => {
 			for (const t of pi.getAllTools()) allTools.add(t.name);
 		};
@@ -74,31 +85,47 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 						(e.message.role === "assistant" || e.message.role === "toolResult"),
 				);
 
-		const promote = () => {
-			remember();
-			if (allTools.size > 0) pi.setActiveTools([...allTools]);
+		const restoreOrdinaryTools = () => {
+			if (bootstrapActive && toolsBeforeBootstrap) {
+				pi.setActiveTools(toolsBeforeBootstrap);
+			}
+			bootstrapActive = false;
+			toolsBeforeBootstrap = undefined;
 		};
+
+		const promote = restoreOrdinaryTools;
 
 		const applyBootstrap = () => {
 			remember();
 			const known = bootstrapTools.filter((t) => allTools.has(t));
 			if (known.length !== bootstrapTools.length) {
-				// Composition drift: a missing bootstrap tool degrades to the full
-				// catalog rather than leaving the model with nothing (as anchored).
+				// Composition drift: leave Pi's ordinary active tools unchanged instead
+				// of exposing an incomplete bootstrap set.
 				promote();
 			} else {
+				if (!bootstrapActive) toolsBeforeBootstrap = pi.getActiveTools();
 				pi.setActiveTools(known);
+				bootstrapActive = true;
 			}
 		};
 
 		pi.on("session_start", (_event, ctx) => {
-			if (hasAssistantContent(ctx)) promote();
-			else applyBootstrap();
+			if (!isDeepSeekV4ProModel(ctx)) {
+				restoreOrdinaryTools();
+			} else if (hasAssistantContent(ctx)) {
+				promote();
+			} else {
+				applyBootstrap();
+			}
 		});
 
 		// Re-assert the phase on every user turn; this also covers switching
 		// between sessions, which does not always fire session_start.
 		pi.on("before_agent_start", (event, ctx) => {
+			if (!isDeepSeekV4ProModel(ctx)) {
+				restoreOrdinaryTools();
+				return undefined;
+			}
 			if (hasAssistantContent(ctx)) {
 				promote();
 				return undefined; // normal pi system prompt
@@ -120,6 +147,22 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 				? payload.messages as Array<Record<string, unknown>>
 				: undefined;
 			const sessionId = ctx.sessionManager.getSessionId();
+
+			if (!isDeepSeekV4ProModel(ctx)) {
+				bootstrapRequests.delete(sessionId);
+				restoreOrdinaryTools();
+				const normalPrompt = normalPrompts.get(sessionId);
+				if (!normalPrompt || !messages) return undefined;
+				const hasSystem = messages.some((message) => message.role === "system");
+				return {
+					...payload,
+					messages: hasSystem
+						? messages.map((message) => message.role === "system"
+							? { ...message, content: normalPrompt }
+							: message)
+						: [{ role: "system", content: normalPrompt }, ...messages],
+				};
+			}
 
 			if (hasAssistantContent(ctx)) {
 				const normalPrompt = normalPrompts.get(sessionId);
@@ -178,6 +221,10 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 
 		if (promoteOn !== "assistant-message") {
 			pi.on("tool_call", (_event: ToolCallEvent, ctx) => {
+				if (!isDeepSeekV4ProModel(ctx)) {
+					restoreOrdinaryTools();
+					return;
+				}
 				// Any tool call promotes — even a blocked or failed execution, which
 				// is already durable in the transcript (matches anchored).
 				bootstrapRequests.delete(ctx.sessionManager.getSessionId());
@@ -188,6 +235,10 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 		if (promoteOn !== "tool-call") {
 			pi.on("message_end", (event: MessageEndEvent, ctx) => {
 				if (event.message.role !== "assistant") return;
+				if (!isDeepSeekV4ProModel(ctx)) {
+					restoreOrdinaryTools();
+					return;
+				}
 				const wasBootstrap = bootstrapRequests.delete(ctx.sessionManager.getSessionId());
 				promote();
 				if (wasBootstrap && (event.message as { stopReason?: string }).stopReason === "length") {

@@ -1,23 +1,21 @@
 /**
- * pi-ds-anchored-standard — bootstrap with a Minimal tool catalog, then expose
- * the full catalog after the first tool call or assistant message.
+ * pi-ds-anchored-standard — a DeepSeek V4 Pro 0813 performance workaround.
  *
- * Port of xiaobright/dsh-anchored-standard to pi's dynamic tool loading
- * (`pi.setActiveTools`): request #1 uses the exact Minimal persona, only
- * `bash` + `read`, `max_tokens: 1024`, and no generated workspace/skill
- * context. After its first durable promotion signal, the full pi prompt,
- * provider budget, and tool catalog return. Resume/fork/reload preserve phase.
+ * Only recognized DeepSeek V4 Pro model IDs receive the Minimal first request:
+ * exact persona, `bash` + `read`, `max_tokens: 1024`, and no generated
+ * workspace/skill context. All other models keep ordinary Pi behavior. After a
+ * target session's first tool call or assistant message, the normal Pi prompt,
+ * output limit, and all enabled tools return.
  *
- * The bundled trajectory detector (`/trajectory`) verifies the bootstrap is
- * effective using the "let me" word-frequency fingerprint from
- * xiaobright/modeltest's DeepSeek V4 trajectory analysis: anchored sessions
- * keep "let me" ≈ 0–1 while "we"/"let's" dominate.
+ * The method is inspired by xiaobright/dsh-anchored-standard. `/trajectory`
+ * exposes the related xiaobright/modeltest word-frequency fingerprint as a
+ * diagnostic signal for DeepSeek V4 Pro only.
  */
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT } from "./phases.js";
+import { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT, isDeepSeekV4ProModel } from "./phases.js";
 import { createTrajectoryDetector } from "./detect.js";
 
-export { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT } from "./phases.js";
+export { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT, isDeepSeekV4ProModel } from "./phases.js";
 export type { AnchoredStandardOptions } from "./phases.js";
 export { TrajectoryTracker, countLetMe, createTrajectoryDetector } from "./detect.js";
 export type { TrajectoryStats, TrajectoryDetectorOptions } from "./detect.js";
@@ -30,12 +28,16 @@ export default function anchoredStandard(pi: ExtensionAPI): void {
 
 	pi.registerCommand("trajectory", {
 		description:
-			"Show anchored-standard trajectory stats (let me / we / let's fingerprint)",
+			"Show DeepSeek V4 Pro trajectory stats (let me / we / let's fingerprint)",
 		handler: async (_args, ctx: ExtensionCommandContext) => {
+			if (!isDeepSeekV4ProModel(ctx)) {
+				ctx.ui.notify("trajectory inactive — pi-ds-anchored-standard only applies to DeepSeek V4 Pro", "info");
+				return;
+			}
 			const s = detector.tracker.stats();
 			const verdict = s.drift
-				? `DRIFT — ${s.letMe} "let me" hits: bootstrap not anchoring`
-				: `anchored — ${s.letMe} "let me" hit${s.letMe === 1 ? "" : "s"} (threshold ≥ 2)`;
+				? `signal drift — ${s.letMe} "let me" hits (threshold ≥ 2)`
+				: `anchored-like signal — ${s.letMe} "let me" hit${s.letMe === 1 ? "" : "s"}`;
 			ctx.ui.notify(
 				`trajectory (${s.assistantMessages} assistant msgs): ${verdict}` +
 					` — we ${s.we}, let's ${s.lets}, ${s.stagedReplies} staged replies,` +

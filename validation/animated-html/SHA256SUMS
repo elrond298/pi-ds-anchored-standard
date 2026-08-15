@@ -28,5 +28,5 @@ ef0baae78ffe13c8d1d9e6116a3a2a2f86640def58a8043bea6d93691e02bd4a  ./artifacts/co
 bd5238263062ab6a392b0347db5693a5ff914e4ad336edd3f7bb52a67a171d01  ./conversations/anchored-steer-max.jsonl
 ebdcbf5fccd7a16a91ebf4d36537c74afabd906ab24aa8fdcc0c1eda4f59de7d  ./conversations/control-high.jsonl
 b9339307684f1b2d7f3bcbe719e35edf0fb599a6a8366699efda675b04c03cef  ./conversations/control-max.jsonl
-c2213ee8b2222ed4f0ebaf75f39270a45ba330d37d6949354853b61ddfe80f1d  ./README.md
+ecebd105143c76a1319410ac5200fbdf94884431bcf15501eb33cd57315e2202  ./README.md
 a72ebbb691ac0feaa147c5c6f03bc672f5d30286a3160d03cefb4624620a16de  ./sanitize-session.mjs

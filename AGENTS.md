@@ -2,27 +2,28 @@
 
 ## Project overview
 
-`pi-ds-anchored-standard` is a Pi extension that ports
-[xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard)
-to pi's dynamic tool loading:
+`pi-ds-anchored-standard` targets improved DeepSeek V4 Pro 0813 performance in
+Pi. Inspired by
+[xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard),
+it implements first-request conditioning through Pi's dynamic tool loading:
 
-- a blank session's first provider request uses the byte-identical Minimal
+- only recognized DeepSeek V4 Pro model IDs activate the workaround; all other
+  models keep ordinary Pi behavior;
+- a target model's blank-session first provider request uses the exact Minimal
   persona, only `bash` + `read`, `max_tokens: 1024`, and no generated workspace
   or skill-catalog sections;
-- the session promotes to the full registered tool catalog after its first
-  durable promotion signal — first `tool_call` or first assistant
-  `message_end`, whichever comes first (`promoteOn: "either"`);
+- the session restores the exact pre-bootstrap active tool list after its first
+  durable promotion signal — first `tool_call` or first assistant `message_end`,
+  whichever comes first (`promoteOn: "either"`);
 - a bootstrap response ending at `stopReason: "length"` queues exactly one
   hidden steering continuation in the same agent run after promotion;
 - the phase is derived from the durable session transcript (any
   assistant/toolResult entry), so resume, fork, and reload preserve it
   without stored state;
-- a missing bootstrap tool degrades to the full catalog instead of leaving
-  the model with nothing;
-- a bundled trajectory detector (`/trajectory`, `src/detect.ts`) verifies the
-  bootstrap is effective via the "let me" word-frequency fingerprint from
-  xiaobright/modeltest's DeepSeek V4 trajectory analysis (anchored sessions
-  keep `let me` ≈ 0–1, `we`/`let's` dominate).
+- a missing bootstrap tool leaves Pi's ordinary active tool list unchanged;
+- the bundled `/trajectory` detector runs only for DeepSeek V4 Pro and reports
+  the "let me" word-frequency fingerprint from xiaobright/modeltest as a
+  diagnostic signal, not proof of successful conditioning.
 
 The package is loaded by Pi from `./src/index.ts` via the `pi.extensions`
 field. Core logic lives in `src/phases.ts` (the `createAnchoredStandard`

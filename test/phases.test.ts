@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT } from "../src/phases.js";
+import { createAnchoredStandard, ANCHORED_MINIMAL_PROMPT, isDeepSeekV4ProModel } from "../src/phases.js";
 
 const TOOLS = ["bash", "read", "write", "replace", "ffgrep", "fffind", "todo"];
 
@@ -8,9 +8,9 @@ interface Entry {
 	message?: { role: string };
 }
 
-function makePi() {
-	// Post-startup steady state: the extension already applied bootstrap.
-	let active = ["bash", "read"];
+function makePi(initialTools = TOOLS) {
+	// Ordinary Pi may have any user-selected active tool subset.
+	let active = [...initialTools];
 	const sent: Array<{ message: any; options: any }> = [];
 	const handlers = new Map<string, Array<(event: any, ctx: any) => any>>();
 	const pi = {
@@ -38,17 +38,123 @@ function makePi() {
 	return pi;
 }
 
-function makeCtx(entries: Entry[] = []) {
-	return { sessionManager: { getEntries: () => entries, getSessionId: () => "test-session" } };
+function makeCtx(entries: Entry[] = [], modelId: string | undefined = "deepseek-v4-pro") {
+	return {
+		model: modelId ? { id: modelId } : undefined,
+		sessionManager: { getEntries: () => entries, getSessionId: () => "test-session" },
+	};
 }
 
 // Pi calls the extension factory with only `pi`; each event carries its own
 // ctx (with sessionManager). The mock mirrors that: emit passes ctx per call.
-function setup(options?: Parameters<typeof createAnchoredStandard>[0]) {
-	const pi = makePi();
+function setup(
+	options?: Parameters<typeof createAnchoredStandard>[0],
+	initialTools?: string[],
+) {
+	const pi = makePi(initialTools);
 	createAnchoredStandard(options)(pi as any);
 	return { pi };
 }
+
+describe("model gating", () => {
+	it.each([
+		"deepseek-v4-pro",
+		"deepseek-v4-pro-0813",
+		"deepseek/deepseek-v4-pro",
+		"deepseek/deepseek-v4-pro-0813",
+	])("recognizes targeted model id %s", (id) => {
+		expect(isDeepSeekV4ProModel(makeCtx([], id) as any)).toBe(true);
+	});
+
+	it.each(["deepseek-v4-flash", "gpt-5.4"])(
+		"rejects non-target model %s",
+		(id) => expect(isDeepSeekV4ProModel(makeCtx([], id) as any)).toBe(false),
+	);
+
+	it("rejects an undefined model", () => {
+		expect(isDeepSeekV4ProModel({ model: undefined } as any)).toBe(false);
+	});
+
+	it("leaves a non-target model on ordinary Pi tools and prompt", async () => {
+		const { pi } = setup(undefined, ["read"]);
+		const ctx = makeCtx([], "gpt-5.4");
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, ctx);
+		const agentResult = await pi.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", systemPrompt: "normal pi prompt" },
+			ctx,
+		);
+		const payload = { max_tokens: 128_000, messages: [{ role: "user", content: "hello" }] };
+		const providerResult = await pi.emit(
+			"before_provider_request",
+			{ type: "before_provider_request", payload },
+			ctx,
+		);
+
+		expect(pi.active).toEqual(["read"]);
+		expect(agentResult).toBeUndefined();
+		expect(providerResult).toBeUndefined();
+		expect(payload.max_tokens).toBe(128_000);
+	});
+
+	it("does not continue a truncated response from another model", async () => {
+		const { pi } = setup(undefined, ["read"]);
+		const ctx = makeCtx([], "gpt-5.4");
+		await pi.emit(
+			"before_provider_request",
+			{ type: "before_provider_request", payload: { max_tokens: 128_000 } },
+			ctx,
+		);
+		await pi.emit(
+			"message_end",
+			{ type: "message_end", message: { role: "assistant", stopReason: "length" } },
+			ctx,
+		);
+
+		expect(pi.active).toEqual(["read"]);
+		expect(pi.sent).toEqual([]);
+	});
+
+	it("starts bootstrapping if a blank session switches to DeepSeek V4 Pro", async () => {
+		const { pi } = setup();
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx([], "gpt-5.4"));
+		const result = await pi.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", systemPrompt: "normal pi prompt" },
+			makeCtx([], "deepseek-v4-pro"),
+		);
+
+		expect(pi.active.sort()).toEqual(["bash", "read"]);
+		expect(result.systemPrompt).toBe(ANCHORED_MINIMAL_PROMPT);
+	});
+
+	it("restores the normal prompt if the model changes before the provider call", async () => {
+		const { pi } = setup(undefined, ["read", "write"]);
+		await pi.emit(
+			"before_agent_start",
+			{ type: "before_agent_start", systemPrompt: "normal pi prompt" },
+			makeCtx(),
+		);
+		const result = await pi.emit(
+			"before_provider_request",
+			{
+				type: "before_provider_request",
+				payload: {
+					max_tokens: 128_000,
+					messages: [
+						{ role: "system", content: ANCHORED_MINIMAL_PROMPT },
+						{ role: "user", content: "hello" },
+					],
+				},
+			},
+			makeCtx([], "gpt-5.4"),
+		);
+
+		expect(pi.active.sort()).toEqual(["read", "write"]);
+		expect(result.messages[0]).toEqual({ role: "system", content: "normal pi prompt" });
+		expect(result.max_tokens).toBe(128_000);
+	});
+});
 
 describe("bootstrap phase", () => {
 	it("starts a new session with only shell + read active", async () => {
@@ -79,10 +185,11 @@ describe("bootstrap phase", () => {
 });
 
 describe("promotion", () => {
-	it("promotes to the full catalog on a tool call", async () => {
-		const { pi } = setup();
+	it("restores the pre-bootstrap tool list on a tool call", async () => {
+		const { pi } = setup(undefined, ["read", "write"]);
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("tool_call", { type: "tool_call", toolName: "bash" }, makeCtx());
-		expect(pi.active.sort()).toEqual([...TOOLS].sort());
+		expect(pi.active.sort()).toEqual(["read", "write"]);
 	});
 
 	it("promotes on a text-only assistant reply", async () => {
@@ -103,6 +210,7 @@ describe("promotion", () => {
 
 	it("promoteOn: tool-call ignores assistant messages", async () => {
 		const { pi } = setup({ promoteOn: "tool-call" });
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
 		expect(pi.active.sort()).toEqual(["bash", "read"]);
 		await pi.emit("tool_call", { type: "tool_call", toolName: "read" }, makeCtx());
@@ -111,6 +219,7 @@ describe("promotion", () => {
 
 	it("promoteOn: assistant-message ignores tool calls", async () => {
 		const { pi } = setup({ promoteOn: "assistant-message" });
+		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
 		await pi.emit("tool_call", { type: "tool_call", toolName: "bash" }, makeCtx());
 		expect(pi.active.sort()).toEqual(["bash", "read"]);
 		await pi.emit("message_end", { type: "message_end", message: { role: "assistant" } }, makeCtx());
@@ -260,9 +369,12 @@ describe("bootstrap provider payload", () => {
 });
 
 describe("degradation", () => {
-	it("degrades to the full catalog when a bootstrap tool is missing", async () => {
-		const { pi } = setup({ bootstrapTools: ["bash", "read", "nonexistent"] });
+	it("keeps ordinary active tools when a bootstrap tool is missing", async () => {
+		const { pi } = setup(
+			{ bootstrapTools: ["bash", "read", "nonexistent"] },
+			["read", "write"],
+		);
 		await pi.emit("session_start", { type: "session_start", reason: "new" }, makeCtx());
-		expect(pi.active.sort()).toEqual([...TOOLS].sort());
+		expect(pi.active.sort()).toEqual(["read", "write"]);
 	});
 });

@@ -12,7 +12,8 @@ Browser rendering and screenshots were performed afterward.
 
 ## Runs retained
 
-All runs used `deepseek/deepseek-v4-pro` with the same installed Pi extensions.
+All runs used DeepSeek V4 Pro 0813, exposed in Pi as
+`deepseek/deepseek-v4-pro`, with the same installed extensions.
 The retained runs compare:
 
 - **Ordinary Pi (control):** the extension is disabled. The model receives Pi's
@@ -51,9 +52,11 @@ Each configuration was run at `high` and `max` thinking levels.
 
 Each GIF is a four-second browser recording of its checked-in HTML artifact,
 converted at 540 pixels and 8 fps using the same viewport and encoding settings.
-The ordinary Pi and current same-run outputs render as recognizable animated
-pelicans riding bicycles. The separate follow-up restarted and simplified the
-work; its max output has a `0×0` SVG layout and therefore appears blank.
+The current same-run outputs are visibly more detailed and coherent than the
+ordinary Pi controls in this test, especially the `max` result's rider pose,
+helmet, fish, bicycle linkage, and scenery. The separate follow-up restarted and
+simplified the work; its max output has a `0×0` SVG layout and therefore appears
+blank. This is visual evidence from one task, not a general benchmark.
 
 ## Preserved conversations
 

@@ -2,7 +2,7 @@
 	"name": "pi-ds-anchored-standard",
 	"version": "0.1.0",
 	"type": "module",
-	"description": "Pi extension: start with a minimal first request, then restore Pi's normal prompt and all enabled tools.",
+	"description": "Improve DeepSeek V4 Pro 0813 in Pi with a minimal first request, then restore ordinary Pi behavior.",
 	"author": "ck",
 	"license": "MIT",
 	"files": [

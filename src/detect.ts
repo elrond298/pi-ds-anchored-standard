@@ -1,22 +1,10 @@
 /**
- * Trajectory detector — verifies that the anchored-standard bootstrap is
- * effective, using the word-frequency fingerprint from
- * xiaobright/modeltest's DeepSeek V4 trajectory analysis.
+ * Trajectory detector for DeepSeek V4 Pro sessions.
  *
- * Methodology (docs/v4.1/DEEPSEEK_V4_TRAJECTORY_ANALYSIS_20260814.md):
- * completed assistant messages are scanned case-insensitively with word
- * boundaries, counting `let me` / `we` / `let's` across both visible text
- * and reasoning blocks. In the analysis:
- *
- *   minimal / anchored-standard:  `let me` 0–1 total per task, `we` 165+,
- *   `let's` 88+, ~1 staged reply, many short reasoning blocks
- *   standard:                    `let me` 208, `we` 11, `let's` 2, 55 staged
- *   replies
- *
- * So a session that stays on the anchored trajectory keeps `let me` ≈ 0–1
- * while `we`/`let's` dominate; crossing `driftThreshold` "let me" hits means
- * the catalog/prompt no longer anchors the trajectory (extension not loaded,
- * composition drifted, or the model just doesn't condition this way).
+ * Counts `let me`, `we`, and `let's` across visible text and reasoning blocks,
+ * following xiaobright/modeltest's DeepSeek V4 trajectory analysis. The
+ * fingerprint is diagnostic only: it was measured on structured engineering
+ * tasks and does not prove whether first-request conditioning succeeded.
  */
 
 import type {
@@ -24,6 +12,7 @@ import type {
 	ExtensionContext,
 	MessageEndEvent,
 } from "@earendil-works/pi-coding-agent";
+import { isDeepSeekV4ProModel } from "./phases.js";
 
 /** Structural subset of an assistant message (text + thinking parts). */
 interface AssistantMessageLike {
@@ -128,7 +117,7 @@ export function createTrajectoryDetector(options: TrajectoryDetectorOptions = {}
 		tracker,
 		activate: (pi: ExtensionAPI): void => {
 			pi.on("message_end", (event: MessageEndEvent, ctx: ExtensionContext) => {
-				if (event.message.role !== "assistant") return;
+				if (!isDeepSeekV4ProModel(ctx) || event.message.role !== "assistant") return;
 				tracker.add(event.message);
 				if (!warned && tracker.stats().drift) {
 					warned = true;
