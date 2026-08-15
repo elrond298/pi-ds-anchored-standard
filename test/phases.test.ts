@@ -152,7 +152,7 @@ describe("bootstrap provider payload", () => {
 		]);
 	});
 
-	it("restores the normal prompt and provider budget after promotion", async () => {
+	it("restores installed tools and extension prompts after promotion", async () => {
 		const { pi } = setup();
 		await pi.emit(
 			"before_agent_start",
@@ -166,7 +166,10 @@ describe("bootstrap provider payload", () => {
 				payload: {
 					max_tokens: 384_000,
 					messages: [
-						{ role: "system", content: ANCHORED_MINIMAL_PROMPT },
+						{
+							role: "system",
+							content: `${ANCHORED_MINIMAL_PROMPT}\n\nPONYTAIL MODE ACTIVE — level: lite`,
+						},
 						{ role: "user", content: "actual request" },
 					],
 					tools: TOOLS.map((name) => ({ name })),
@@ -194,9 +197,10 @@ describe("bootstrap provider payload", () => {
 		);
 		expect(result.max_tokens).toBe(384_000);
 		expect(result.tools).toEqual(TOOLS.map((name) => ({ name })));
+		expect(result.tools).toContainEqual({ name: "ffgrep" });
 		expect(result.messages[0]).toEqual({
 			role: "system",
-			content: "full pi prompt + workspace + skills",
+			content: "full pi prompt + workspace + skills\n\nPONYTAIL MODE ACTIVE — level: lite",
 		});
 	});
 

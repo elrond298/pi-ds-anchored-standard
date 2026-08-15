@@ -155,8 +155,16 @@ export function createAnchoredStandard(options: AnchoredStandardOptions = {}) {
 			if (minimalPrompt && messages) {
 				const system = messages.find((message) => message.role === "system");
 				const user = messages.find((message) => message.role === "user");
-				if (!normalPrompts.has(sessionId) && typeof system?.content === "string") {
-					normalPrompts.set(sessionId, system.content);
+				if (typeof system?.content === "string") {
+					const normalPrompt = normalPrompts.get(sessionId);
+					if (!normalPrompt) {
+						normalPrompts.set(sessionId, system.content);
+					} else if (system.content.startsWith(minimalPrompt)) {
+						const extensionSuffix = system.content.slice(minimalPrompt.length);
+						if (extensionSuffix && !normalPrompt.endsWith(extensionSuffix)) {
+							normalPrompts.set(sessionId, normalPrompt + extensionSuffix);
+						}
+					}
 				}
 				result.messages = [
 					system ? { ...system, content: minimalPrompt } : { role: "system", content: minimalPrompt },

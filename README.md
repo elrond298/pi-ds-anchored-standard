@@ -38,9 +38,9 @@ pi -e ./src/index.ts
 - **Request #1 output**: provider payload is capped to `max_tokens: 1024`, the
   upstream reproduction's trajectory-critical budget.
 - **Promotion**: the first `tool_call` or the first assistant `message_end`
-  switches to the full registered catalog before the next model request.
-  A blocked or failed tool execution still promotes — it is already durable
-  in the transcript.
+  restores the full registered catalog, provider budget, and Pi prompt before
+  the next request, including user-installed tools and extension prompt additions
+  (for example `ffgrep` and Ponytail). Blocked or failed tool calls still promote.
 - **Durability**: any assistant/toolResult entry in the session transcript
   means promoted, so resume/fork/reload never re-bootstrap a session that
   already produced content.
