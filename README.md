@@ -92,11 +92,30 @@ We ran the same animated-HTML task at `high` and `max` thinking levels with the
 full-catalog control, the initial fresh `followUp`, and the final same-run
 `steer` continuation.
 
-![Animated SVG produced by the final anchored max validation](validation/animated-html/demo.gif)
+<table>
+<thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
+<tbody>
+<tr>
+<th>Full-catalog control</th>
+<td><img src="validation/animated-html/animations/control-high.gif" alt="Control high animation" width="360"></td>
+<td><img src="validation/animated-html/animations/control-max.gif" alt="Control max animation" width="360"></td>
+</tr>
+<tr>
+<th>Fresh <code>followUp</code></th>
+<td><img src="validation/animated-html/animations/followup-high.gif" alt="Follow-up high animation" width="360"></td>
+<td><img src="validation/animated-html/animations/followup-max.gif" alt="Follow-up max blank animation" width="360"></td>
+</tr>
+<tr>
+<th>Same-run <code>steer</code></th>
+<td><img src="validation/animated-html/animations/steer-high.gif" alt="Steer high animation" width="360"></td>
+<td><img src="validation/animated-html/animations/steer-max.gif" alt="Steer max animation" width="360"></td>
+</tr>
+</tbody>
+</table>
 
-This is the actual browser-rendered output from the checked-in final anchored
-`max` run. The tested agent generated the HTML without previewing or validating
-it; the animation was captured afterward.
+These are the actual browser-rendered outputs from the checked-in runs. The
+tested agents generated the HTML without previewing or validating it; each
+animation was captured afterward using the same viewport and encoding settings.
 
 Visual inspection found that the fresh `followUp` restarted and simplified the
 work: its `max` SVG collapsed to a `0×0` render. Both final `steer` outputs
@@ -108,7 +127,7 @@ The retained evidence under
 
 - complete sanitized Pi conversations for the six runs that produced artifacts;
 - each generated HTML file and its browser screenshot;
-- the animation shown above;
+- all six browser-recorded animations shown above;
 - the sanitizer and SHA-256 manifest.
 
 See the [validation report](validation/animated-html/README.md) for the visual

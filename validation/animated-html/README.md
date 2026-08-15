@@ -25,22 +25,32 @@ Each configuration was run at `high` and `max` thinking levels.
 
 ## Visual result
 
-![Final anchored max animation](demo.gif)
+<table>
+<thead><tr><th></th><th>High</th><th>Max</th></tr></thead>
+<tbody>
+<tr>
+<th>Control</th>
+<td><img src="animations/control-high.gif" alt="Control high animation" width="360"></td>
+<td><img src="animations/control-max.gif" alt="Control max animation" width="360"></td>
+</tr>
+<tr>
+<th>Fresh <code>followUp</code></th>
+<td><img src="animations/followup-high.gif" alt="Follow-up high animation" width="360"></td>
+<td><img src="animations/followup-max.gif" alt="Follow-up max blank animation" width="360"></td>
+</tr>
+<tr>
+<th>Same-run <code>steer</code></th>
+<td><img src="animations/steer-high.gif" alt="Steer high animation" width="360"></td>
+<td><img src="animations/steer-max.gif" alt="Steer max animation" width="360"></td>
+</tr>
+</tbody>
+</table>
 
-This animation is a six-second browser recording of the checked-in
-[`artifacts/anchored-steer-max/pelican-bicycle.html`](artifacts/anchored-steer-max/pelican-bicycle.html),
-converted to a 720-pixel, 10-fps GIF for README playback.
-
-The control and final steering outputs rendered as recognizable animated
-pelicans riding bicycles. The fresh follow-up restarted and simplified the
-work; its max output produced an SVG root with a `0×0` browser layout, visible
-as a blank screenshot.
-
-| run | high | max |
-|---|---|---|
-| control | [preview](artifacts/control-high/preview.png) | [preview](artifacts/control-max/preview.png) |
-| fresh `followUp` | [preview](artifacts/anchored-followup-high/preview.png) | [blank preview](artifacts/anchored-followup-max/preview.png) |
-| same-run `steer` | [preview](artifacts/anchored-steer-high/preview.png) | [preview](artifacts/anchored-steer-max/preview.png) |
+Each GIF is a four-second browser recording of its checked-in HTML artifact,
+converted at 540 pixels and 8 fps using the same viewport and encoding settings.
+The control and final steering outputs render as recognizable animated pelicans
+riding bicycles. The fresh follow-up restarted and simplified the work; its max
+output has a `0×0` SVG layout and therefore appears blank.
 
 ## Preserved conversations
 
@@ -71,5 +81,5 @@ preserved, while machine-sensitive metadata is transformed:
 - home-directory paths become `$HOME`.
 
 The source session files are not committed. Generated HTML, screenshots, and
-the GIF contain only the requested pelican artwork. [`SHA256SUMS`](SHA256SUMS)
+the GIFs contain only the requested pelican artwork. [`SHA256SUMS`](SHA256SUMS)
 records the sanitized validation bundle.
